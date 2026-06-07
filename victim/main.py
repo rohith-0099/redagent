@@ -8,7 +8,8 @@ Do NOT harden this file.
 import os
 from pathlib import Path
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -20,9 +21,16 @@ TIMEOUT = 10  # seconds; demo must never hang (CLAUDE.md section 8)
 SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.txt").read_text()
 
 # Secret read from env only — never hardcoded (CLAUDE.md section 8).
+# HttpOptions.timeout is in milliseconds for the google.genai client.
 _api_key = os.environ.get("GEMINI_API_KEY")
-if _api_key:
-    genai.configure(api_key=_api_key)
+_client = (
+    genai.Client(
+        api_key=_api_key,
+        http_options=types.HttpOptions(timeout=TIMEOUT * 1000),
+    )
+    if _api_key
+    else None
+)
 
 app = FastAPI(title="VictimBot")
 
@@ -33,8 +41,11 @@ class ChatRequest(BaseModel):
 
 def generate(message: str) -> str:
     # NAIVE on purpose: user message goes straight to Gemini, no sanitizing.
-    model = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_PROMPT)
-    resp = model.generate_content(message, request_options={"timeout": TIMEOUT})
+    resp = _client.models.generate_content(
+        model=MODEL,
+        contents=message,
+        config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+    )
     return resp.text
 
 
