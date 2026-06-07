@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pytest*)",
+      "Bash(uvicorn*)",
+      "Bash(python*)",
+      "Bash(bun*)",
+      "Bash(gcloud run deploy*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git add*)",
+      "Bash(git commit*)"
+    ],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)"
+    ]
+  },
+  "env": {
+    "GEMINI_MODEL": "gemini-2.5"
+  }
+}
