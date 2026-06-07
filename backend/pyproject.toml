@@ -11,6 +11,8 @@ dependencies = [
     "google-genai",
     "python-dotenv",
     "arize-phoenix-otel",
+    "arize-phoenix-client",
+    "mcp",
     "openinference-instrumentation-google-genai",
     # OTel pinned to the line google-adk allows (<=1.41.1); phoenix-otel
     # otherwise pulls 1.42.x and breaks ADK.
