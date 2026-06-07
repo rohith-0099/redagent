@@ -1,0 +1,13 @@
+[project]
+name = "redagent-backend"
+version = "0.1.0"
+description = "RedAgent backend — multi-agent AI safety red-teaming"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2",
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

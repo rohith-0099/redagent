@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / frontend (later slices)
+node_modules/
+.next/
+bun.lockb
+
+# OS / editor cruft
+.DS_Store
+*.swp
