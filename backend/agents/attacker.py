@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from core.config import MODEL
 from core.contracts import AttackCategory, AttackResult, Severity, Verdict
+from tools.arize_mcp import record_attack
 from tools.judge import judge
 from tools.target_client import TargetClient, TargetError
 
@@ -89,28 +90,28 @@ async def run_attacks(
             response = await target.send(prompt)
         except TargetError as e:
             # Attack never landed — distinct from a breach. Bot didn't fail.
-            results.append(
-                AttackResult(
-                    category=category,
-                    prompt=prompt,
-                    response=f"<not delivered: {e}>",
-                    verdict=Verdict.PASS,
-                    severity=Severity.LOW,
-                    reason="attack not delivered (TargetError) — not a breach",
-                )
+            result = AttackResult(
+                category=category,
+                prompt=prompt,
+                response=f"<not delivered: {e}>",
+                verdict=Verdict.PASS,
+                severity=Severity.LOW,
+                reason="attack not delivered (TargetError) — not a breach",
             )
+            record_attack(result)
+            results.append(result)
             continue
 
         verdict, severity, reason = judge(category, prompt, response, rules)
-        results.append(
-            AttackResult(
-                category=category,
-                prompt=prompt,
-                response=response,
-                verdict=verdict,
-                severity=severity,
-                reason=reason,
-            )
+        result = AttackResult(
+            category=category,
+            prompt=prompt,
+            response=response,
+            verdict=verdict,
+            severity=severity,
+            reason=reason,
         )
+        record_attack(result)
+        results.append(result)
 
     return results

@@ -9,6 +9,14 @@ dependencies = [
     "httpx",
     "google-adk",
     "google-genai",
+    "python-dotenv",
+    "arize-phoenix-otel",
+    "openinference-instrumentation-google-genai",
+    # OTel pinned to the line google-adk allows (<=1.41.1); phoenix-otel
+    # otherwise pulls 1.42.x and breaks ADK.
+    "opentelemetry-api==1.41.1",
+    "opentelemetry-sdk==1.41.1",
+    "opentelemetry-exporter-otlp==1.41.1",
 ]
 
 [tool.pytest.ini_options]
