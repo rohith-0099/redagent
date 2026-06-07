@@ -2,7 +2,7 @@
 
 import os
 
-MODEL = "gemini-2.5"
+MODEL = "gemini-2.5-flash"
 MAX_ATTACKS = 30
 TARGET_TIMEOUT = 10  # seconds; demo must never hang
 DEFAULT_PROMPTS_PER = 5
