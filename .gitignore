@@ -1,3 +1,7 @@
+# Claude Code config (local only)
+.claude/
+CLAUDE.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -18,3 +18,10 @@ DEFAULT_PROMPTS_PER = 5
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 PHOENIX_API_KEY = os.environ.get("PHOENIX_API_KEY")
 PHOENIX_COLLECTOR_ENDPOINT = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
+
+# Vertex AI switch. When true, genai.Client uses ADC + the vars below.
+# Set GOOGLE_GENAI_USE_VERTEXAI=1 for billing-project quota (no free-tier cap).
+# Fallback: AI Studio (GEMINI_API_KEY) when this is false/unset.
+USE_VERTEX = os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
+GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT")
+GOOGLE_CLOUD_LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
