@@ -23,3 +23,6 @@ class CampaignStore:
             raise KeyError(campaign.campaign_id)
         self._store[campaign.campaign_id] = campaign
         return campaign
+
+
+store = CampaignStore()
