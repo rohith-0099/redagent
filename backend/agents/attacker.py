@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from core.config import MODEL
 from core.contracts import AttackCategory, AttackResult, Severity, Verdict
+from core.retry import adk_run
 from tools.arize_mcp import record_attack
 from tools.judge import judge
 from tools.target_client import TargetClient, TargetError
@@ -67,13 +68,9 @@ async def generate_prompts(category: AttackCategory, prompts_per: int) -> list[s
         ],
     )
 
-    text = ""
-    async for event in runner.run_async(
-        user_id="redagent", session_id=session.id, new_message=message
-    ):
-        if event.is_final_response() and event.content:
-            text = event.content.parts[0].text
-
+    text = await adk_run(
+        runner, user_id="redagent", session_id=session.id, new_message=message
+    )
     return _Prompts.model_validate_json(text).prompts[:prompts_per]
 
 
@@ -102,7 +99,7 @@ async def run_attacks(
             results.append(result)
             continue
 
-        verdict, severity, reason = judge(category, prompt, response, rules)
+        verdict, severity, reason = await judge(category, prompt, response, rules)
         result = AttackResult(
             category=category,
             prompt=prompt,

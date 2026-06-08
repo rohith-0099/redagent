@@ -11,6 +11,7 @@ from google.genai import types
 
 from core.config import MAX_ATTACKS, MODEL
 from core.contracts import AttackCategory, AttackPlan
+from core.retry import adk_run
 
 _ALL_CATEGORIES = [c.value for c in AttackCategory]
 
@@ -50,13 +51,9 @@ async def plan_campaign(target_description: str = "") -> AttackPlan:
         parts=[types.Part(text=user_text)],
     )
 
-    text = ""
-    async for event in runner.run_async(
-        user_id="redagent", session_id=session.id, new_message=message
-    ):
-        if event.is_final_response() and event.content:
-            text = event.content.parts[0].text
-
+    text = await adk_run(
+        runner, user_id="redagent", session_id=session.id, new_message=message
+    )
     plan = AttackPlan.model_validate_json(text)
     # Hard cap: shrink prompts_per if the LLM ignored the budget constraint.
     max_per = MAX_ATTACKS // max(len(plan.categories), 1)

@@ -48,21 +48,19 @@ def test_record_attack_noop_when_unconfigured(monkeypatch):
     called.assert_not_called()
 
 
-def test_run_attacks_traces_every_attack(monkeypatch):
+async def test_run_attacks_traces_every_attack(monkeypatch):
     monkeypatch.setattr(
         attacker, "generate_prompts", AsyncMock(return_value=["p1", "p2", "p3"])
     )
     monkeypatch.setattr(
-        attacker, "judge", lambda c, p, r, rules: (Verdict.PASS, Severity.LOW, "held")
+        attacker, "judge", AsyncMock(return_value=(Verdict.PASS, Severity.LOW, "held"))
     )
     recorded = []
     monkeypatch.setattr(attacker, "record_attack", lambda res: recorded.append(res))
     target = AsyncMock()
     target.send = AsyncMock(return_value="nope")
 
-    results = asyncio.run(
-        attacker.run_attacks(AttackCategory.JAILBREAK, target, 3)
-    )
+    results = await attacker.run_attacks(AttackCategory.JAILBREAK, target, 3)
 
     assert len(recorded) == 3  # one trace per attack
     assert recorded == results

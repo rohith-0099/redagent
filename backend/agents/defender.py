@@ -16,6 +16,7 @@ from google.genai import types
 
 from core.config import MODEL
 from core.contracts import AttackCategory, FixProposal, VulnReport
+from core.retry import adk_run
 
 _INSTRUCTION = (
     "You are a defensive security engineer hardening a customer-support chatbot's "
@@ -99,13 +100,9 @@ async def propose_fix(
         parts=[types.Part(text=_build_prompt_text(report, current_system_prompt, breached))],
     )
 
-    text = ""
-    async for event in runner.run_async(
-        user_id="redagent", session_id=session.id, new_message=message
-    ):
-        if event.is_final_response() and event.content:
-            text = event.content.parts[0].text
-
+    text = await adk_run(
+        runner, user_id="redagent", session_id=session.id, new_message=message
+    )
     return _parse_fix(text, breached)
 
 
