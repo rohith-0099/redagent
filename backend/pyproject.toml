@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2",
     "pytest",
+    "pytest-asyncio",
     "httpx",
     "google-adk",
     "google-genai",
@@ -24,3 +25,4 @@ dependencies = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+asyncio_mode = "auto"
