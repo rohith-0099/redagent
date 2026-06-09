@@ -15,6 +15,7 @@ from agents.analyst import build_vuln_report
 from agents.attacker import run_attacks
 from agents.defender import propose_fix
 from agents.strategist import plan_campaign
+from agents.verifier import verify_fix
 from core.contracts import AttackResult, Campaign, TargetConfig
 from core.state import store
 from tools.target_client import TargetClient
@@ -23,6 +24,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Maps campaign_id → current system prompt of the target (needed by Defender).
 _system_prompts: dict[str, str] = {}
+# Maps campaign_id → (target_url, target_config) so the Verifier can rebuild the
+# target and re-test the fix.
+_targets: dict[str, tuple] = {}
 
 
 def _read_victim_prompt() -> str:
@@ -53,6 +57,7 @@ async def start_campaign(
     campaign = Campaign(campaign_id=campaign_id)
     store.create(campaign)
     _system_prompts[campaign_id] = current_system_prompt or _read_victim_prompt()
+    _targets[campaign_id] = (target_url, target_config)
 
     # --- Strategist ---
     campaign.status = "running"
@@ -115,5 +120,35 @@ async def approve_and_fix(campaign_id: str) -> Campaign:
     fix = await propose_fix(campaign.report, system_prompt)
     campaign.fix = fix
     campaign.status = "done"
+    store.update(campaign)
+    return campaign
+
+
+def _build_target(campaign_id: str) -> TargetClient:
+    """Rebuild the campaign's target (for the Verifier re-run)."""
+    target_url, target_config = _targets.get(campaign_id, (None, None))
+    if target_config is not None:
+        return TargetClient(config=target_config)
+    return TargetClient(base_url=target_url)
+
+
+async def verify_campaign(campaign_id: str) -> Campaign:
+    """Run the Verifier AFTER approval: re-run breached attacks against the fix.
+
+    Hard-requires an approved fix (run approve_and_fix first). Writes a
+    VerificationReport to the campaign. The human-approval gate stays intact —
+    verification only happens once a fix exists."""
+    campaign = store.get(campaign_id)
+    if campaign is None:
+        raise KeyError(campaign_id)
+    if campaign.fix is None:
+        raise ValueError(
+            f"Campaign {campaign_id!r} has no approved fix to verify "
+            "(run approve_and_fix first)"
+        )
+
+    target = _build_target(campaign_id)
+    report = await verify_fix(campaign, campaign.fix, target)
+    campaign.verification = report
     store.update(campaign)
     return campaign

@@ -52,6 +52,9 @@ app = FastAPI(title="VictimBot")
 
 class ChatRequest(BaseModel):
     message: str
+    # Optional: RedAgent's Verifier sends a hardened prompt here to re-test a
+    # proposed fix WITHOUT redeploying. Absent → default system prompt.
+    system_prompt_override: str | None = None
 
 
 # --- Fake tools (simulated, in-memory — NO real money, NO real DB) ---------
@@ -124,15 +127,22 @@ _TOOL_POLICY = (
 )
 
 
-def respond(message: str) -> tuple[str, list[dict]]:
+def respond(message: str, system_prompt_override: str | None = None) -> tuple[str, list[dict]]:
     """Run a bounded tool-use loop. Returns (final_text, tool_call_trace).
 
     NAIVE: user message goes straight to Gemini with tools available, no
-    sanitizing — the bot decides when to call tools.
+    sanitizing — the bot decides when to call tools. When system_prompt_override
+    is given (RedAgent Verifier), it REPLACES the default instruction so a
+    proposed fix can be re-tested; tools stay available.
     """
+    system_instruction = (
+        system_prompt_override
+        if system_prompt_override
+        else f"{SYSTEM_PROMPT}\n\n{_TOOL_POLICY}"
+    )
     contents: list = [types.Content(role="user", parts=[types.Part(text=message)])]
     config = types.GenerateContentConfig(
-        system_instruction=f"{SYSTEM_PROMPT}\n\n{_TOOL_POLICY}",
+        system_instruction=system_instruction,
         tools=_TOOLS,
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
@@ -179,5 +189,5 @@ def health():
 def chat(req: ChatRequest):
     if not req.message.strip():
         raise HTTPException(status_code=422, detail="message must not be empty")
-    text, tool_calls = respond(req.message)
+    text, tool_calls = respond(req.message, req.system_prompt_override)
     return {"response": text, "tool_calls": tool_calls}

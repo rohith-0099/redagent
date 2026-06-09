@@ -91,6 +91,13 @@ class TargetClient:
                 TargetConfig(url=f"{base}/chat", preset=Preset.SIMPLE_JSON)
             )
 
+    def with_system_prompt(self, system_prompt: str) -> "TargetClient":
+        """Clone this client with a hardened system-prompt override (Verifier)."""
+        cfg = self._config.model_copy(
+            update={"system_prompt_override": system_prompt}
+        )
+        return TargetClient(config=cfg, transport=self._transport)
+
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             timeout=self._config.timeout_seconds,
@@ -109,6 +116,9 @@ class TargetClient:
         (each {"name", "args"}); empty list when the target exposes no trace.
         """
         body = _substitute(self._config.request_template, message)
+        # Verifier: inject the hardened prompt so the target re-tests under it.
+        if self._config.system_prompt_override is not None and isinstance(body, dict):
+            body["system_prompt_override"] = self._config.system_prompt_override
         kwargs = {"headers": self._config.headers}
         if self._config.http_method == "GET":
             kwargs["params"] = body

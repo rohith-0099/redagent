@@ -37,6 +37,9 @@ class TargetConfig(BaseModel):
     # Dotted path to a tool-call trace in the response (agentic targets). None =
     # target exposes no tool trace. Filled from preset when not set.
     tool_calls_path: str | None = None
+    # Verifier only: a hardened system prompt to test, injected as a top-level
+    # "system_prompt_override" field in the request body. None for normal attacks.
+    system_prompt_override: str | None = None
     timeout_seconds: int = TARGET_TIMEOUT
     preset: Preset = Preset.SIMPLE_JSON
 
@@ -116,6 +119,21 @@ class FinalResult(BaseModel):
     after: VulnReport
 
 
+class VerificationReport(BaseModel):
+    """Proof a fix holds: re-run the breached attacks against the hardened prompt.
+
+    per_category maps each affected category to {"before": rate, "after": rate}.
+    verdict: 'fix_effective' (0 still breach) | 'partial' | 'ineffective'.
+    """
+
+    original_breaches: int
+    breaches_after_fix: int
+    fixed: int
+    still_breaching: list[AttackResult] = Field(default_factory=list)
+    per_category: dict[AttackCategory, dict[str, float]] = Field(default_factory=dict)
+    verdict: str
+
+
 class Campaign(BaseModel):
     """Run state for a single red-teaming campaign."""
 
@@ -126,3 +144,4 @@ class Campaign(BaseModel):
     report: VulnReport | None = None
     fix: FixProposal | None = None
     final: FinalResult | None = None
+    verification: VerificationReport | None = None
