@@ -104,7 +104,7 @@ def test_enum_rejects_invalid_value():
 def test_config_values():
     assert MODEL == "gemini-2.5-flash"
     assert MAX_ATTACKS == 30
-    assert TARGET_TIMEOUT == 10
+    assert TARGET_TIMEOUT == 30
     assert DEFAULT_PROMPTS_PER == 5
 
 

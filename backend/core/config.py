@@ -11,7 +11,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 MODEL = "gemini-2.5-flash"
 MAX_ATTACKS = 30
-TARGET_TIMEOUT = 10  # seconds; demo must never hang
+TARGET_TIMEOUT = 30  # seconds; Vertex Flash ~2-5s, 30s is safe margin
 DEFAULT_PROMPTS_PER = 5
 
 # Read from env / Secret Manager only. None if unset.
