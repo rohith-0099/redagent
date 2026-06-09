@@ -15,7 +15,7 @@ from agents.analyst import build_vuln_report
 from agents.attacker import run_attacks
 from agents.defender import propose_fix
 from agents.strategist import plan_campaign
-from core.contracts import AttackResult, Campaign
+from core.contracts import AttackResult, Campaign, TargetConfig
 from core.state import store
 from tools.target_client import TargetClient
 
@@ -38,11 +38,14 @@ async def start_campaign(
     target_description: str = "",
     current_system_prompt: str = "",
     campaign_id: str | None = None,
+    target_config: TargetConfig | None = None,
     _progress: asyncio.Queue | None = None,
 ) -> str:
     """Run Strategist → Attacker → Analyst and pause for human approval.
 
     Returns the campaign_id. Campaign status will be 'awaiting_approval'.
+    target_config: how to call an arbitrary target. When None, a default
+                   simple_json config is built from target_url (VictimBot shape).
     _progress: optional asyncio.Queue for SSE streaming; receives dicts +
                a None sentinel when the pipeline reaches awaiting_approval.
     """
@@ -60,7 +63,10 @@ async def start_campaign(
     store.update(campaign)
 
     # --- Attacker (one category at a time) ---
-    target = TargetClient(base_url=target_url)
+    if target_config is not None:
+        target = TargetClient(config=target_config)
+    else:
+        target = TargetClient(base_url=target_url)
     all_results: list[AttackResult] = []
     for category in plan.categories:
         results = await run_attacks(category, target, plan.prompts_per)

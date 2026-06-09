@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from agents.orchestrator import approve_and_fix, get_campaign, start_campaign
+from core.contracts import TargetConfig
 
 app = FastAPI(title="RedAgent API")
 
@@ -28,6 +29,7 @@ _campaign_queues: dict[str, asyncio.Queue] = {}
 class CampaignRequest(BaseModel):
     target_url: str
     target_description: str = ""
+    target_config: TargetConfig | None = None
 
 
 @app.post("/campaign", status_code=201)
@@ -39,6 +41,7 @@ async def create_campaign(body: CampaignRequest):
         start_campaign(
             target_url=body.target_url,
             target_description=body.target_description,
+            target_config=body.target_config,
             campaign_id=campaign_id,
             _progress=q,
         )

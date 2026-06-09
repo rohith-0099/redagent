@@ -6,8 +6,36 @@ Agents communicate ONLY through these models (CLAUDE.md section 6).
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+from core.config import TARGET_TIMEOUT
+
+
+class Preset(str, Enum):
+    """Named request/response shape for a target. CUSTOM = user supplies both."""
+
+    SIMPLE_JSON = "simple_json"
+    OPENAI_CHAT = "openai_chat"
+    CUSTOM = "custom"
+
+
+class TargetConfig(BaseModel):
+    """How to call an arbitrary chatbot/agent HTTP endpoint.
+
+    request_template / response_path may be left None when a non-CUSTOM preset
+    fills them (resolved in tools.target_client). The attack prompt is
+    substituted wherever the string "{{PROMPT}}" appears in request_template.
+    """
+
+    url: str
+    http_method: Literal["POST", "GET"] = "POST"
+    headers: dict[str, str] = Field(default_factory=dict)
+    request_template: dict | None = None
+    response_path: str | None = None
+    timeout_seconds: int = TARGET_TIMEOUT
+    preset: Preset = Preset.SIMPLE_JSON
 
 
 class Verdict(str, Enum):

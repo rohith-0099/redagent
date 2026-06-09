@@ -1,12 +1,20 @@
-"""HTTP client RedAgent uses to reach a target AI app (e.g. VictimBot).
+"""HTTP client RedAgent uses to reach a target AI app.
 
-Target-agnostic: works with any endpoint exposing POST /chat ({message} ->
-{response}) and GET /health.
+Target-agnostic: a TargetConfig describes the endpoint (url, method, headers),
+how to build the request body (request_template with a "{{PROMPT}}" placeholder),
+and how to extract the reply (response_path, dotted, supports list indices).
+
+Backward compat: TargetClient(base_url) with no config keeps the original
+VictimBot behavior exactly (POST {base}/chat {"message": ...} -> {"response": ...}).
 """
+
+from urllib.parse import urlsplit
 
 import httpx
 
 from core.config import TARGET_TIMEOUT
+from core.contracts import Preset, TargetConfig
+from tools.target_presets import PRESETS
 
 
 class TargetError(Exception):
@@ -17,27 +25,93 @@ class TargetError(Exception):
     """
 
 
+def _resolve(config: TargetConfig) -> TargetConfig:
+    """Fill request_template / response_path from the preset when not supplied."""
+    template = config.request_template
+    path = config.response_path
+
+    if config.preset is Preset.CUSTOM:
+        if template is None or path is None:
+            raise ValueError(
+                "custom preset requires both request_template and response_path"
+            )
+        return config
+
+    preset_template, preset_path = PRESETS[config.preset]
+    return config.model_copy(
+        update={
+            "request_template": template if template is not None else preset_template,
+            "response_path": path if path is not None else preset_path,
+        }
+    )
+
+
+def _substitute(obj, prompt: str):
+    """Recursively replace the "{{PROMPT}}" placeholder in template strings."""
+    if isinstance(obj, str):
+        return obj.replace("{{PROMPT}}", prompt)
+    if isinstance(obj, dict):
+        return {k: _substitute(v, prompt) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_substitute(v, prompt) for v in obj]
+    return obj
+
+
+def _extract(data, path: str):
+    """Walk a dotted path (dict keys + numeric list indices) into the response."""
+    cur = data
+    for part in path.split("."):
+        if isinstance(cur, list):
+            cur = cur[int(part)]
+        else:
+            cur = cur[part]
+    return cur
+
+
 class TargetClient:
     def __init__(
-        self, base_url: str, transport: httpx.AsyncBaseTransport | None = None
+        self,
+        base_url: str | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+        config: TargetConfig | None = None,
     ) -> None:
-        self._base_url = base_url.rstrip("/")
         self._transport = transport  # injected in tests; None = real network
+
+        if config is not None:
+            self._config = _resolve(config)
+            self._base_url = None  # health() derives base from url
+        else:
+            # Backward-compat: bare base_url -> simple_json hitting /chat.
+            base = base_url.rstrip("/")
+            self._base_url = base
+            self._config = _resolve(
+                TargetConfig(url=f"{base}/chat", preset=Preset.SIMPLE_JSON)
+            )
 
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
-            base_url=self._base_url,
-            timeout=TARGET_TIMEOUT,
+            timeout=self._config.timeout_seconds,
             transport=self._transport,
         )
 
     async def send(self, message: str) -> str:
-        """Deliver one prompt to the target, return its response text."""
+        """Deliver one prompt to the target, return its extracted response text."""
+        body = _substitute(self._config.request_template, message)
+        kwargs = {"headers": self._config.headers}
+        if self._config.http_method == "GET":
+            kwargs["params"] = body
+        else:
+            kwargs["json"] = body
+
         try:
             async with self._client() as client:
-                resp = await client.post("/chat", json={"message": message})
+                resp = await client.request(
+                    self._config.http_method, self._config.url, **kwargs
+                )
         except httpx.TimeoutException as e:
-            raise TargetError(f"target timed out after {TARGET_TIMEOUT}s") from e
+            raise TargetError(
+                f"target timed out after {self._config.timeout_seconds}s"
+            ) from e
         except httpx.RequestError as e:
             raise TargetError(f"target request failed: {e}") from e
 
@@ -45,13 +119,37 @@ class TargetClient:
             raise TargetError(
                 f"target returned {resp.status_code} {resp.reason_phrase}"
             )
-        return resp.json()["response"]
+        return _extract(resp.json(), self._config.response_path)
 
     async def health(self) -> bool:
         """True if the target's /health returns 200. Never raises."""
+        if self._base_url is not None:
+            base = self._base_url
+        else:
+            parts = urlsplit(self._config.url)
+            base = f"{parts.scheme}://{parts.netloc}"
         try:
             async with self._client() as client:
-                resp = await client.get("/health")
+                resp = await client.get(f"{base}/health")
             return resp.status_code == 200
         except httpx.HTTPError:
             return False
+
+
+async def test_connection(
+    config: TargetConfig,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> dict:
+    """Send one harmless probe ("Hello") and report whether the target answered.
+
+    Returns {"ok": True, "sample_reply": <text>} or {"ok": False, "error": <msg>}.
+    Used by the UI/API to validate a TargetConfig before a campaign.
+    """
+    client = TargetClient(config=config, transport=transport)
+    try:
+        reply = await client.send("Hello")
+    except TargetError as e:
+        return {"ok": False, "error": str(e)}
+    except Exception as e:  # malformed response_path / template extraction failure
+        return {"ok": False, "error": f"could not parse target reply: {e}"}
+    return {"ok": True, "sample_reply": reply}
