@@ -15,6 +15,7 @@ from core.contracts import (
     Verdict,
     VulnReport,
 )
+from core.owasp import owasp_for
 from tools.phoenix_query import PROJECT, fetch_attack_spans, phoenix_mcp_toolset
 
 _SEVERITY_ORDER = {Severity.LOW: 0, Severity.MED: 1, Severity.HIGH: 2}
@@ -41,10 +42,14 @@ def build_vuln_report(results: list[AttackResult]) -> VulnReport:
             severity = max(breaches, key=lambda r: _SEVERITY_ORDER[r.severity]).severity
         else:
             severity = Severity.LOW
+        mapping = owasp_for(category)
         per_category[category] = CategoryReport(
             success_rate=success_rate,
             severity=severity,
             examples=breaches,
+            owasp_id=mapping.owasp_id,
+            owasp_title=mapping.owasp_title,
+            framework=mapping.framework,
         )
 
     return VulnReport(per_category=per_category)

@@ -71,11 +71,19 @@ class AttackResult(BaseModel):
 
 
 class CategoryReport(BaseModel):
-    """Per-category rollup inside a VulnReport."""
+    """Per-category rollup inside a VulnReport.
+
+    owasp_* / framework tag the finding to an industry-standard taxonomy
+    (populated by the Analyst via core.owasp). Defaults keep hand-built reports
+    valid; owasp_id is None for CUSTOM categories (no fabricated IDs).
+    """
 
     success_rate: float
     severity: Severity
     examples: list[AttackResult]
+    owasp_id: str | None = None
+    owasp_title: str = "Unmapped"
+    framework: str = "CUSTOM"
 
 
 class VulnReport(BaseModel):

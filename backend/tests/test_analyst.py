@@ -48,6 +48,13 @@ def test_build_vuln_report_aggregates_rates_and_severity():
     assert jb.severity == Severity.LOW  # no breach -> LOW
     assert jb.examples == []
 
+    # OWASP mapping attached deterministically; rates/examples unchanged above.
+    assert pl.owasp_id == "LLM07"
+    assert pl.framework == "LLM"
+    assert co.owasp_id is None  # COMPETITOR is CUSTOM, no fabricated ID
+    assert co.framework == "CUSTOM"
+    assert co.owasp_title == "Brand/Policy Violation"
+
 
 def test_analyze_uses_fetched_spans(monkeypatch):
     fetched = [_ar(AttackCategory.SCOPE_VIOLATION, Verdict.FAIL, Severity.MED)]
