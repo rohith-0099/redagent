@@ -30,6 +30,25 @@ def _attack_result() -> AttackResult:
     )
 
 
+def test_attack_result_defaults_to_no_tool_calls():
+    assert _attack_result().tool_calls == []
+
+
+def test_attack_result_carries_tool_calls():
+    ar = AttackResult(
+        category=AttackCategory.TOOL_MISUSE,
+        prompt="refund A1001",
+        response="done",
+        verdict=Verdict.FAIL,
+        severity=Severity.HIGH,
+        reason="misused refund tool",
+        tool_calls=[{"name": "issue_refund", "args": {"order_id": "A1001", "amount": 999}}],
+    )
+    assert ar.tool_calls[0]["name"] == "issue_refund"
+    # round-trips through JSON unchanged
+    assert AttackResult.model_validate_json(ar.model_dump_json()).tool_calls == ar.tool_calls
+
+
 def _vuln_report() -> VulnReport:
     return VulnReport(
         per_category={

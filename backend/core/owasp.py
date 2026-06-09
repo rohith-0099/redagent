@@ -28,11 +28,9 @@ _MAPPING: dict[AttackCategory, OwaspMapping] = {
     AttackCategory.JAILBREAK: OwaspMapping("LLM01", "Prompt Injection", "LLM"),
     AttackCategory.SCOPE_VIOLATION: OwaspMapping("LLM06", "Excessive Agency", "LLM"),
     AttackCategory.COMPETITOR: OwaspMapping(None, "Brand/Policy Violation", "CUSTOM"),
+    AttackCategory.GOAL_HIJACK: OwaspMapping("ASI01", "Agent Goal Hijacking", "AGENTIC"),
+    AttackCategory.TOOL_MISUSE: OwaspMapping("ASI02", "Tool Misuse", "AGENTIC"),
 }
-
-# Future agentic categories slot in here once their AttackCategory values exist:
-#   GOAL_HIJACK -> OwaspMapping("ASI01", "Agent Goal Hijacking", "AGENTIC")
-#   TOOL_MISUSE -> OwaspMapping("ASI02", "Tool Misuse", "AGENTIC")
 
 _UNMAPPED = OwaspMapping(None, "Unmapped", "CUSTOM")
 

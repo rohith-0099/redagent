@@ -18,7 +18,7 @@ async def test_run_attacks_builds_results(monkeypatch):
     )
     monkeypatch.setattr(attacker, "record_attack", lambda r: None)
     target = AsyncMock()
-    target.send = AsyncMock(return_value="leaked secret")
+    target.send_traced = AsyncMock(return_value=("leaked secret", []))
 
     results = await attacker.run_attacks(AttackCategory.PROMPT_LEAK, target, 2)
 
@@ -46,7 +46,7 @@ async def test_target_error_recorded_as_not_breached(monkeypatch):
     monkeypatch.setattr(attacker, "judge", _judge)
     monkeypatch.setattr(attacker, "record_attack", lambda r: None)
     target = AsyncMock()
-    target.send = AsyncMock(side_effect=TargetError("connection refused"))
+    target.send_traced = AsyncMock(side_effect=TargetError("connection refused"))
 
     results = await attacker.run_attacks(AttackCategory.JAILBREAK, target, 1)
 

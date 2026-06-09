@@ -34,6 +34,9 @@ class TargetConfig(BaseModel):
     headers: dict[str, str] = Field(default_factory=dict)
     request_template: dict | None = None
     response_path: str | None = None
+    # Dotted path to a tool-call trace in the response (agentic targets). None =
+    # target exposes no tool trace. Filled from preset when not set.
+    tool_calls_path: str | None = None
     timeout_seconds: int = TARGET_TIMEOUT
     preset: Preset = Preset.SIMPLE_JSON
 
@@ -54,6 +57,9 @@ class AttackCategory(str, Enum):
     JAILBREAK = "JAILBREAK"
     COMPETITOR = "COMPETITOR"
     SCOPE_VIOLATION = "SCOPE_VIOLATION"
+    # Agentic categories (OWASP Agentic Top 10) — target an agent with tools.
+    GOAL_HIJACK = "GOAL_HIJACK"
+    TOOL_MISUSE = "TOOL_MISUSE"
 
 
 class AttackPlan(BaseModel):
@@ -68,6 +74,9 @@ class AttackResult(BaseModel):
     verdict: Verdict
     severity: Severity
     reason: str
+    # Tool-call trace (agentic attacks). Each: {"name": str, "args": dict}.
+    # Empty for text-only / single-shot attacks.
+    tool_calls: list[dict] = Field(default_factory=list)
 
 
 class CategoryReport(BaseModel):

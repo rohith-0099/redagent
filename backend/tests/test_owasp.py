@@ -30,6 +30,18 @@ def test_competitor_is_custom_with_no_fabricated_id():
     assert m.owasp_title  # has a sensible title, not empty
 
 
+def test_goal_hijack_maps_to_asi01():
+    m = owasp_for(AttackCategory.GOAL_HIJACK)
+    assert m.owasp_id == "ASI01"
+    assert m.framework == "AGENTIC"
+
+
+def test_tool_misuse_maps_to_asi02():
+    m = owasp_for(AttackCategory.TOOL_MISUSE)
+    assert m.owasp_id == "ASI02"
+    assert m.framework == "AGENTIC"
+
+
 def test_every_category_has_a_mapping():
     for cat in AttackCategory:
         m = owasp_for(cat)

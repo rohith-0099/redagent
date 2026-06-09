@@ -58,7 +58,7 @@ async def test_run_attacks_traces_every_attack(monkeypatch):
     recorded = []
     monkeypatch.setattr(attacker, "record_attack", lambda res: recorded.append(res))
     target = AsyncMock()
-    target.send = AsyncMock(return_value="nope")
+    target.send_traced = AsyncMock(return_value=("nope", []))
 
     results = await attacker.run_attacks(AttackCategory.JAILBREAK, target, 3)
 

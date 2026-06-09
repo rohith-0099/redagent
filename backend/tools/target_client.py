@@ -26,7 +26,7 @@ class TargetError(Exception):
 
 
 def _resolve(config: TargetConfig) -> TargetConfig:
-    """Fill request_template / response_path from the preset when not supplied."""
+    """Fill request_template / response_path / tool_calls_path from the preset."""
     template = config.request_template
     path = config.response_path
 
@@ -35,13 +35,16 @@ def _resolve(config: TargetConfig) -> TargetConfig:
             raise ValueError(
                 "custom preset requires both request_template and response_path"
             )
-        return config
+        return config  # tool_calls_path stays as given (may be None)
 
-    preset_template, preset_path = PRESETS[config.preset]
+    preset_template, preset_path, preset_tool_path = PRESETS[config.preset]
     return config.model_copy(
         update={
             "request_template": template if template is not None else preset_template,
             "response_path": path if path is not None else preset_path,
+            "tool_calls_path": config.tool_calls_path
+            if config.tool_calls_path is not None
+            else preset_tool_path,
         }
     )
 
@@ -96,6 +99,15 @@ class TargetClient:
 
     async def send(self, message: str) -> str:
         """Deliver one prompt to the target, return its extracted response text."""
+        text, _ = await self.send_traced(message)
+        return text
+
+    async def send_traced(self, message: str) -> tuple[str, list[dict]]:
+        """Deliver one prompt; return (response_text, tool_calls).
+
+        tool_calls is the agentic tool-call trace extracted via tool_calls_path
+        (each {"name", "args"}); empty list when the target exposes no trace.
+        """
         body = _substitute(self._config.request_template, message)
         kwargs = {"headers": self._config.headers}
         if self._config.http_method == "GET":
@@ -119,7 +131,17 @@ class TargetClient:
             raise TargetError(
                 f"target returned {resp.status_code} {resp.reason_phrase}"
             )
-        return _extract(resp.json(), self._config.response_path)
+        data = resp.json()
+        text = _extract(data, self._config.response_path)
+        tool_calls: list[dict] = []
+        if self._config.tool_calls_path:
+            try:
+                extracted = _extract(data, self._config.tool_calls_path)
+                if isinstance(extracted, list):
+                    tool_calls = extracted
+            except (KeyError, IndexError, TypeError):
+                tool_calls = []  # trace absent — not an error
+        return text, tool_calls
 
     async def health(self) -> bool:
         """True if the target's /health returns 200. Never raises."""
