@@ -226,6 +226,9 @@ node_modules/
 .next/
 bun.lockb
 
+# RAG persistent vector store (disk-backed Chroma)
+.rag_store/
+
 # OS / editor cruft
 .DS_Store
 *.swp

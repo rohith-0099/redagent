@@ -14,6 +14,12 @@ MAX_ATTACKS = 30
 TARGET_TIMEOUT = 30  # seconds; Vertex Flash ~2-5s, 30s is safe margin
 DEFAULT_PROMPTS_PER = 5
 
+# RAG: Gemini text-embedding model (Vertex) + disk-backed Chroma store dir.
+EMBED_MODEL = os.environ.get("EMBED_MODEL", "gemini-embedding-001")
+RAG_DIR = os.environ.get(
+    "RAG_DIR", str(Path(__file__).resolve().parents[1] / ".rag_store")
+)
+
 # Read from env / Secret Manager only. None if unset.
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 PHOENIX_API_KEY = os.environ.get("PHOENIX_API_KEY")

@@ -10,6 +10,7 @@ dependencies = [
     "httpx",
     "google-adk",
     "google-genai",
+    "chromadb==1.5.9",  # pinned: Rust-backed API; pre-0.5 had breaking changes
     "python-dotenv",
     "arize-phoenix-otel",
     "arize-phoenix-client",
