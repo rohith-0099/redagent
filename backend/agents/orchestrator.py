@@ -7,6 +7,7 @@ at status=awaiting_approval. Defender only runs when approve_and_fix() is
 called explicitly.
 """
 
+import asyncio
 import uuid
 from pathlib import Path
 
@@ -36,12 +37,16 @@ async def start_campaign(
     target_url: str,
     target_description: str = "",
     current_system_prompt: str = "",
+    campaign_id: str | None = None,
+    _progress: asyncio.Queue | None = None,
 ) -> str:
     """Run Strategist → Attacker → Analyst and pause for human approval.
 
     Returns the campaign_id. Campaign status will be 'awaiting_approval'.
+    _progress: optional asyncio.Queue for SSE streaming; receives dicts +
+               a None sentinel when the pipeline reaches awaiting_approval.
     """
-    campaign_id = str(uuid.uuid4())
+    campaign_id = campaign_id or str(uuid.uuid4())
     campaign = Campaign(campaign_id=campaign_id)
     store.create(campaign)
     _system_prompts[campaign_id] = current_system_prompt or _read_victim_prompt()
@@ -60,6 +65,9 @@ async def start_campaign(
     for category in plan.categories:
         results = await run_attacks(category, target, plan.prompts_per)
         all_results.extend(results)
+        if _progress:
+            for r in results:
+                await _progress.put({"type": "attack_result", "result": r.model_dump()})
 
     campaign.results = all_results
     store.update(campaign)
@@ -69,6 +77,10 @@ async def start_campaign(
     campaign.report = report
     campaign.status = "awaiting_approval"
     store.update(campaign)
+
+    if _progress:
+        await _progress.put({"type": "report_ready", "report": report.model_dump()})
+        await _progress.put(None)  # sentinel: stream closed
 
     return campaign_id
 
