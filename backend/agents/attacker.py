@@ -121,11 +121,26 @@ async def generate_prompts(
 
 
 async def run_attacks(
-    category: AttackCategory, target: TargetClient, prompts_per: int, store=None
+    category: AttackCategory,
+    target: TargetClient,
+    prompts_per: int,
+    store=None,
+    mode: str = "single_shot",
 ) -> list[AttackResult]:
     """Generate, fire, and judge attacks for one category.
 
-    `store`: optional RagStore for technique-informed generation (guarded)."""
+    `store`: optional RagStore for technique-informed generation (guarded).
+    `mode`: "single_shot" (default) or "crescendo" (multi-turn). Crescendo runs
+    `prompts_per` bounded multi-turn attempts, each returning one AttackResult."""
+    if mode == "crescendo":
+        from agents.crescendo import run_crescendo  # lazy: avoid import cycle
+
+        guidance = await _technique_guidance(store, category)
+        return [
+            await run_crescendo(category, target, guidance)
+            for _ in range(prompts_per)
+        ]
+
     prompts = await generate_prompts(category, prompts_per, store=store)
     rules = TARGET_RULES[category]
     results: list[AttackResult] = []

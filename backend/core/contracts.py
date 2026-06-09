@@ -65,6 +65,7 @@ class AttackCategory(str, Enum):
 class AttackPlan(BaseModel):
     categories: list[AttackCategory]
     prompts_per: int
+    attack_mode: str = "single_shot"  # "single_shot" | "crescendo"
 
 
 class AttackResult(BaseModel):
@@ -75,8 +76,13 @@ class AttackResult(BaseModel):
     severity: Severity
     reason: str
     # Tool-call trace (agentic attacks). Each: {"name": str, "args": dict}.
-    # Empty for text-only / single-shot attacks.
+    # For crescendo, this is the breaching turn's trace. Empty otherwise.
     tool_calls: list[dict] = Field(default_factory=list)
+    attack_mode: str = "single_shot"  # "single_shot" | "crescendo"
+    # Crescendo only: per-turn records
+    # {turn_index, attacker_msg, target_response, tool_calls}. Empty single-shot.
+    transcript: list[dict] = Field(default_factory=list)
+    breach_turn: int | None = None  # 1-based turn the breach occurred on
 
 
 class CategoryReport(BaseModel):
