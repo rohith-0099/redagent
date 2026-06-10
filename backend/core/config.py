@@ -18,9 +18,9 @@ DEFAULT_PROMPTS_PER = 5
 
 # RAG: Gemini text-embedding model (Vertex) + disk-backed Chroma store dir.
 EMBED_MODEL = os.environ.get("EMBED_MODEL", "gemini-embedding-001")
-RAG_DIR = os.environ.get(
-    "RAG_DIR", str(Path(__file__).resolve().parents[1] / ".rag_store")
-)
+# Default to a writable tmp dir so disk-backed Chroma never fails on Cloud Run's
+# ephemeral filesystem. Override with RAG_DIR for a persistent local store.
+RAG_DIR = os.environ.get("RAG_DIR", "/tmp/.rag_store")
 
 # Read from env / Secret Manager only. None if unset.
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")

@@ -32,7 +32,9 @@ function now(): string {
 }
 
 export default function Console() {
-  const [targetUrl, setTargetUrl] = useState("http://localhost:8000");
+  const [targetUrl, setTargetUrl] = useState(
+    process.env.NEXT_PUBLIC_DEFAULT_TARGET || "http://localhost:8000",
+  );
   const [description, setDescription] = useState("TechCo customer-support bot");
 
   const [campaignId, setCampaignId] = useState<string | null>(null);
