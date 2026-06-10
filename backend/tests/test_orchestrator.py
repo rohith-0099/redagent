@@ -200,3 +200,55 @@ async def test_approve_and_fix_rejects_wrong_status():
     # Calling again on a done campaign should raise
     with pytest.raises(ValueError, match="not awaiting approval"):
         await orchestrator.approve_and_fix(campaign_id)
+
+
+# ---------------------------------------------------------------------------
+# Attack memory (RAG #2): record at campaign end, guarded against failure
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_campaign_records_breaches_at_end():
+    plan = _make_plan(AttackCategory.COMPETITOR)
+    results = [_make_result(AttackCategory.COMPETITOR)]  # FAIL
+    report = _make_report(breached_cats=[AttackCategory.COMPETITOR])
+    rec = AsyncMock(return_value=1)
+
+    with (
+        patch.object(orchestrator, "plan_campaign", AsyncMock(return_value=plan)),
+        patch.object(orchestrator, "run_attacks", AsyncMock(return_value=results)),
+        patch.object(orchestrator, "build_vuln_report", return_value=report),
+        patch.object(orchestrator, "propose_fix", AsyncMock()),
+        patch("agents.orchestrator.TargetClient"),
+        patch.object(orchestrator, "recon_target", AsyncMock(return_value=ReconReport())),
+        patch.object(orchestrator, "_open_memory", return_value=MagicMock()),
+        patch.object(orchestrator, "record_breaches", rec),
+    ):
+        await orchestrator.start_campaign("http://victim")
+
+    rec.assert_awaited_once()
+    # recorded this run's results under a fingerprint
+    assert rec.await_args.args[2] == results
+
+
+@pytest.mark.asyncio
+async def test_record_failure_does_not_break_campaign():
+    plan = _make_plan(AttackCategory.COMPETITOR)
+    results = [_make_result(AttackCategory.COMPETITOR)]
+    report = _make_report(breached_cats=[AttackCategory.COMPETITOR])
+
+    with (
+        patch.object(orchestrator, "plan_campaign", AsyncMock(return_value=plan)),
+        patch.object(orchestrator, "run_attacks", AsyncMock(return_value=results)),
+        patch.object(orchestrator, "build_vuln_report", return_value=report),
+        patch.object(orchestrator, "propose_fix", AsyncMock()),
+        patch("agents.orchestrator.TargetClient"),
+        patch.object(orchestrator, "recon_target", AsyncMock(return_value=ReconReport())),
+        patch.object(orchestrator, "_open_memory", return_value=MagicMock()),
+        patch.object(
+            orchestrator, "record_breaches", AsyncMock(side_effect=RuntimeError("store down"))
+        ),
+    ):
+        campaign_id = await orchestrator.start_campaign("http://victim")
+
+    campaign = orchestrator.get_campaign(campaign_id)
+    assert campaign.status == "awaiting_approval"  # campaign still completed

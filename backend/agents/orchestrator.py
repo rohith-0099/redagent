@@ -19,6 +19,13 @@ from agents.strategist import plan_campaign
 from agents.verifier import verify_fix
 from core.contracts import AttackResult, Campaign, TargetConfig
 from core.state import store
+from tools.attack_memory import (
+    breach_patterns_guidance,
+    memory_store,
+    recall_breaches,
+    record_breaches,
+    target_fingerprint,
+)
 from tools.target_client import TargetClient
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -36,6 +43,21 @@ def _read_victim_prompt() -> str:
         return path.read_text()
     except FileNotFoundError:
         return ""
+
+
+def _open_memory():
+    """Open the per-target attack-memory store (RAG #2). Patchable in tests."""
+    return memory_store()
+
+
+async def _recall_guidance(mem, fp, category) -> tuple[str, int]:
+    """Recall prior breaches for (fp, category) → (guidance text, count). Guarded:
+    any failure (no creds, store error) → ("", 0) so attacks proceed unchanged."""
+    try:
+        recalled = await recall_breaches(mem, fp, category, category.value, top_k=3)
+        return breach_patterns_guidance(recalled), len(recalled)
+    except Exception:
+        return "", 0
 
 
 async def start_campaign(
@@ -80,10 +102,27 @@ async def start_campaign(
     campaign.plan = plan
     store.update(campaign)
 
+    # --- Attack memory (RAG #2): open per-target store; guarded, optional ---
+    mem, fp = None, None
+    try:
+        fp = target_fingerprint(target_url, recon)
+        mem = _open_memory()
+    except Exception:
+        mem, fp = None, None
+
     # --- Attacker (one category at a time, using discovered context) ---
     all_results: list[AttackResult] = []
     for category in plan.categories:
-        results = await run_attacks(category, target, plan.prompts_per, recon=recon)
+        memory_guidance = ""
+        if mem is not None and fp:
+            memory_guidance, recalled_n = await _recall_guidance(mem, fp, category)
+            if recalled_n and _progress:
+                await _progress.put(
+                    {"type": "memory_recall", "category": category.value, "count": recalled_n}
+                )
+        results = await run_attacks(
+            category, target, plan.prompts_per, recon=recon, memory_guidance=memory_guidance
+        )
         all_results.extend(results)
         if _progress:
             for r in results:
@@ -91,6 +130,13 @@ async def start_campaign(
 
     campaign.results = all_results
     store.update(campaign)
+
+    # --- Attack memory: persist THIS run's breaches (guarded — never break run) ---
+    if mem is not None and fp:
+        try:
+            await record_breaches(mem, fp, all_results)
+        except Exception:
+            pass
 
     # --- Analyst (deterministic rollup — no Phoenix refetch needed) ---
     report = build_vuln_report(all_results)

@@ -97,13 +97,15 @@ async def _technique_guidance(store, category: AttackCategory) -> str:
 
 
 async def generate_prompts(
-    category: AttackCategory, prompts_per: int, store=None, recon=None
+    category: AttackCategory, prompts_per: int, store=None, recon=None, memory_guidance: str = ""
 ) -> list[str]:
     """Generate `prompts_per` adversarial prompts for `category` via ADK.
 
     If `store` (a RagStore) is given, relevant technique guidance is retrieved
     and added to the generation prompt. `recon` (ReconReport) supplies discovered
-    target context for agentic categories. Falls back gracefully when absent."""
+    target context for agentic categories. `memory_guidance` (attack-memory RAG)
+    carries prior breaching patterns to evolve; "" → unchanged behavior. Falls
+    back gracefully when any are absent."""
     agent = LlmAgent(
         name="attacker",
         model=MODEL,
@@ -125,7 +127,7 @@ async def generate_prompts(
                     f"Rule to break: {TARGET_RULES[category]}"
                     f"{agentic_hint} "
                     f"Generate exactly {prompts_per} adversarial test prompts."
-                    f"{guidance}"
+                    f"{guidance}{memory_guidance}"
                 )
             )
         ],
@@ -144,23 +146,27 @@ async def run_attacks(
     store=None,
     mode: str = "single_shot",
     recon=None,
+    memory_guidance: str = "",
 ) -> list[AttackResult]:
     """Generate, fire, and judge attacks for one category.
 
     `store`: optional RagStore for technique-informed generation (guarded).
     `recon`: optional ReconReport supplying discovered target context.
+    `memory_guidance`: optional attack-memory patterns to evolve ("" → unchanged).
     `mode`: "single_shot" (default) or "crescendo" (multi-turn). Crescendo runs
     `prompts_per` bounded multi-turn attempts, each returning one AttackResult."""
     if mode == "crescendo":
         from agents.crescendo import run_crescendo  # lazy: avoid import cycle
 
-        guidance = await _technique_guidance(store, category)
+        guidance = await _technique_guidance(store, category) + memory_guidance
         return [
             await run_crescendo(category, target, guidance, recon=recon)
             for _ in range(prompts_per)
         ]
 
-    prompts = await generate_prompts(category, prompts_per, store=store, recon=recon)
+    prompts = await generate_prompts(
+        category, prompts_per, store=store, recon=recon, memory_guidance=memory_guidance
+    )
     rules = TARGET_RULES[category]
     results: list[AttackResult] = []
 
