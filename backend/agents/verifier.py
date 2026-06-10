@@ -27,8 +27,17 @@ def _replay_prompt(result: AttackResult) -> str:
     return result.prompt
 
 
+_MANUAL_NOTE = (
+    "RedAgent does not modify your AI. It reports a hardened system prompt; apply "
+    "it to your app, then re-run verification."
+)
+
+
 def _build_report(
-    breached: list[AttackResult], after: list[AttackResult]
+    breached: list[AttackResult],
+    after: list[AttackResult],
+    fix_application: str = "inject_field",
+    note: str = "",
 ) -> VerificationReport:
     original = len(breached)
     still = [a for a in after if a.verdict == Verdict.FAIL]
@@ -64,14 +73,28 @@ def _build_report(
         still_breaching=still,
         per_category=per_category,
         verdict=verdict,
+        fix_application=fix_application,
+        note=note,
     )
 
 
 async def verify_fix(
     campaign: Campaign, fix: FixProposal, target: TargetClient
 ) -> VerificationReport:
-    """Re-run the campaign's breached attacks against the hardened prompt."""
+    """Re-run the campaign's breached attacks against the hardened prompt.
+
+    inject_field   → the hardened prompt is injected into each request (VictimBot
+                     demo path). manual_reverify → nothing is injected; the SAME
+                     target is re-tested, assuming the developer already applied
+                     the fix. The mode is recorded on the report for honesty."""
     breached = [r for r in campaign.results if r.verdict == Verdict.FAIL]
+
+    # Read the mode defensively (mock targets in tests lack a real str attr).
+    mode = getattr(target, "fix_application", "inject_field")
+    if mode not in ("inject_field", "manual_reverify"):
+        mode = "inject_field"
+    note = _MANUAL_NOTE if mode == "manual_reverify" else ""
+
     hardened = target.with_system_prompt(fix.new_system_prompt)
 
     after: list[AttackResult] = []
@@ -110,4 +133,4 @@ async def verify_fix(
             )
         )
 
-    return _build_report(breached, after)
+    return _build_report(breached, after, fix_application=mode, note=note)

@@ -71,6 +71,30 @@ def _extract(data, path: str):
     return cur
 
 
+def suggest_response_paths(data, prefix: str = "", out=None, depth: int = 0) -> list[dict]:
+    """List candidate response_paths for every non-empty string field in a JSON
+    body — so onboarding can say "your reply might be here, pick one".
+
+    Walks dicts (prefix.key); for lists, recurses into the first element as ".0".
+    Caps recursion at depth 5. Returns [{path, preview}] (preview truncated)."""
+    if out is None:
+        out = []
+    if depth > 5:
+        return out
+    if isinstance(data, dict):
+        for k, v in data.items():
+            p = f"{prefix}.{k}" if prefix else str(k)
+            suggest_response_paths(v, p, out, depth + 1)
+    elif isinstance(data, list):
+        if data:
+            p = f"{prefix}.0" if prefix else "0"
+            suggest_response_paths(data[0], p, out, depth + 1)
+    elif isinstance(data, str):
+        if data.strip():
+            out.append({"path": prefix, "preview": data[:80]})
+    return out
+
+
 class TargetClient:
     def __init__(
         self,
@@ -92,11 +116,20 @@ class TargetClient:
             )
 
     def with_system_prompt(self, system_prompt: str) -> "TargetClient":
-        """Clone this client with a hardened system-prompt override (Verifier)."""
+        """Clone this client with a hardened system-prompt override (Verifier).
+
+        In manual_reverify mode the override is recorded but never injected
+        (send_traced gates injection on fix_application) — the same target is
+        re-tested assuming the developer applied the prompt on their side."""
         cfg = self._config.model_copy(
             update={"system_prompt_override": system_prompt}
         )
         return TargetClient(config=cfg, transport=self._transport)
+
+    @property
+    def fix_application(self) -> str:
+        """How this target re-tests a fix: 'inject_field' | 'manual_reverify'."""
+        return self._config.fix_application
 
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
@@ -109,15 +142,20 @@ class TargetClient:
         text, _ = await self.send_traced(message)
         return text
 
-    async def send_traced(self, message: str) -> tuple[str, list[dict]]:
-        """Deliver one prompt; return (response_text, tool_calls).
+    async def _raw(self, message: str) -> httpx.Response:
+        """Build + send the request; return the raw 2xx response.
 
-        tool_calls is the agentic tool-call trace extracted via tool_calls_path
-        (each {"name", "args"}); empty list when the target exposes no trace.
-        """
+        Raises TargetError on transport failure / non-2xx so callers never crash.
+        Injects system_prompt_override ONLY in inject_field mode (manual_reverify
+        sends the original request unchanged)."""
         body = _substitute(self._config.request_template, message)
-        # Verifier: inject the hardened prompt so the target re-tests under it.
-        if self._config.system_prompt_override is not None and isinstance(body, dict):
+        # Verifier: inject the hardened prompt so the target re-tests under it —
+        # but only when the target actually honors an injected field.
+        if (
+            self._config.system_prompt_override is not None
+            and isinstance(body, dict)
+            and self._config.fix_application == "inject_field"
+        ):
             body["system_prompt_override"] = self._config.system_prompt_override
         kwargs = {"headers": self._config.headers}
         if self._config.http_method == "GET":
@@ -141,8 +179,42 @@ class TargetClient:
             raise TargetError(
                 f"target returned {resp.status_code} {resp.reason_phrase}"
             )
-        data = resp.json()
-        text = _extract(data, self._config.response_path)
+        return resp
+
+    async def send_traced(self, message: str) -> tuple[str, list[dict]]:
+        """Deliver one prompt; return (response_text, tool_calls).
+
+        tool_calls is the agentic tool-call trace extracted via tool_calls_path
+        (each {"name", "args"}); empty list when the target exposes no trace.
+
+        Non-JSON / streaming targets never crash a campaign: with no
+        response_path the raw body text is the reply; with a response_path but a
+        non-JSON or path-miss body, a clear TargetError is raised (caught upstream
+        as 'not delivered', not a crash).
+        """
+        resp = await self._raw(message)
+
+        try:
+            data = resp.json()
+        except ValueError:
+            data = None  # not JSON (plain text / SSE)
+
+        path = self._config.response_path
+        if not path:
+            # No path configured → the raw body text IS the reply.
+            return resp.text, []
+        if data is None:
+            raise TargetError(
+                "target reply is not JSON but a response_path is set "
+                f"({path!r}) — clear the path for plain-text targets"
+            )
+        try:
+            text = _extract(data, path)
+        except (KeyError, IndexError, TypeError) as e:
+            raise TargetError(
+                f"response_path {path!r} not found in target reply"
+            ) from e
+
         tool_calls: list[dict] = []
         if self._config.tool_calls_path:
             try:
@@ -174,14 +246,46 @@ async def test_connection(
 ) -> dict:
     """Send one harmless probe ("Hello") and report whether the target answered.
 
-    Returns {"ok": True, "sample_reply": <text>} or {"ok": False, "error": <msg>}.
-    Used by the UI/API to validate a TargetConfig before a campaign.
+    Success → {"ok": True, "sample_reply": <text>}.
+    On a 2xx JSON body whose response_path doesn't resolve, instead of a dead
+    error, returns candidate paths so onboarding can pick the right one:
+      {"ok": False, "error": ..., "suggested_paths": [...], "raw_sample": ...}.
+    Transport / non-2xx / non-JSON-with-path → {"ok": False, "error": <msg>}.
     """
     client = TargetClient(config=config, transport=transport)
     try:
-        reply = await client.send("Hello")
+        resp = await client._raw("Hello")
     except TargetError as e:
         return {"ok": False, "error": str(e)}
-    except Exception as e:  # malformed response_path / template extraction failure
-        return {"ok": False, "error": f"could not parse target reply: {e}"}
-    return {"ok": True, "sample_reply": reply}
+
+    try:
+        data = resp.json()
+    except ValueError:
+        data = None  # not JSON
+
+    path = client._config.response_path  # resolved (preset-filled) path
+    if not path:
+        # No path → the raw body text is the reply (plain-text/SSE targets).
+        return {"ok": True, "sample_reply": resp.text[:500]}
+    if data is None:
+        return {
+            "ok": False,
+            "error": (
+                "Target reply is not JSON but a response_path is set. Clear the "
+                "path for plain-text targets, or set the correct one."
+            ),
+        }
+    try:
+        reply = _extract(data, path)
+        if not isinstance(reply, str):
+            raise TypeError("response_path did not resolve to a string")
+        return {"ok": True, "sample_reply": reply}
+    except (KeyError, IndexError, TypeError):
+        import json
+
+        return {
+            "ok": False,
+            "error": "Couldn't find the reply at the given response_path.",
+            "suggested_paths": suggest_response_paths(data),
+            "raw_sample": json.dumps(data)[:1000],
+        }

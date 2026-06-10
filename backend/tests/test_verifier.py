@@ -37,12 +37,14 @@ def _fix():
     return FixProposal(new_system_prompt="HARDENED PROMPT", guards=["g"], rationale="r")
 
 
-def _target(send_results):
+def _target(send_results, fix_application=None):
     """A target whose hardened clone replays send_traced from send_results."""
     hardened = MagicMock()
     hardened.send_traced = AsyncMock(side_effect=send_results)
     target = MagicMock()
     target.with_system_prompt = MagicMock(return_value=hardened)
+    if fix_application is not None:
+        target.fix_application = fix_application
     return target, hardened
 
 
@@ -129,6 +131,29 @@ async def test_agentic_rerun_uses_real_trace_judge():
     assert report.breaches_after_fix == 1
     assert report.verdict == "ineffective"
     assert report.still_breaching[0].tool_calls[0]["name"] == "issue_refund"
+
+
+async def test_report_records_inject_field_mode_by_default(monkeypatch):
+    # MagicMock target has no real str fix_application → defaults to inject_field.
+    results = [_breach(AttackCategory.COMPETITOR)]
+    target, _ = _target([("refused", [])])
+    monkeypatch.setattr(
+        verifier, "judge", AsyncMock(return_value=(Verdict.PASS, Severity.LOW, "held"))
+    )
+    report = await verify_fix(_campaign(results), _fix(), target)
+    assert report.fix_application == "inject_field"
+    assert report.note == ""
+
+
+async def test_report_records_manual_reverify_mode_and_note(monkeypatch):
+    results = [_breach(AttackCategory.COMPETITOR)]
+    target, _ = _target([("refused", [])], fix_application="manual_reverify")
+    monkeypatch.setattr(
+        verifier, "judge", AsyncMock(return_value=(Verdict.PASS, Severity.LOW, "held"))
+    )
+    report = await verify_fix(_campaign(results), _fix(), target)
+    assert report.fix_application == "manual_reverify"
+    assert "does not modify your AI" in report.note
 
 
 async def test_crescendo_replay_uses_transcript(monkeypatch):

@@ -40,6 +40,12 @@ class TargetConfig(BaseModel):
     # Verifier only: a hardened system prompt to test, injected as a top-level
     # "system_prompt_override" field in the request body. None for normal attacks.
     system_prompt_override: str | None = None
+    # How the Verifier applies a fix when re-testing:
+    #   inject_field   = inject system_prompt_override into the request (only
+    #                    works for targets that honor it, e.g. our VictimBot demo).
+    #   manual_reverify= inject NOTHING; re-test the SAME target, assuming the
+    #                    developer already applied the hardened prompt on their side.
+    fix_application: Literal["inject_field", "manual_reverify"] = "inject_field"
     timeout_seconds: int = TARGET_TIMEOUT
     preset: Preset = Preset.SIMPLE_JSON
 
@@ -147,6 +153,10 @@ class VerificationReport(BaseModel):
     still_breaching: list[AttackResult] = Field(default_factory=list)
     per_category: dict[AttackCategory, dict[str, float]] = Field(default_factory=dict)
     verdict: str
+    # Which fix-application mode was used to re-test (honesty: did RedAgent inject
+    # the hardened prompt, or re-test a target the developer hardened themselves).
+    fix_application: str = "inject_field"
+    note: str = ""
 
 
 class Campaign(BaseModel):
