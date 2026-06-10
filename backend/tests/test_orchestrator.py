@@ -11,6 +11,7 @@ from core.contracts import (
     AttackResult,
     CategoryReport,
     FixProposal,
+    ReconReport,
     Severity,
     VulnReport,
     Verdict,
@@ -78,6 +79,7 @@ async def test_start_campaign_reaches_awaiting_approval():
         patch.object(orchestrator, "build_vuln_report", return_value=report),
         patch.object(orchestrator, "propose_fix", AsyncMock()) as mock_defender,
         patch("agents.orchestrator.TargetClient"),
+        patch.object(orchestrator, "recon_target", AsyncMock(return_value=ReconReport())),
     ):
         campaign_id = await orchestrator.start_campaign(
             "http://victim", "TechCo bot", "old system prompt"
@@ -102,6 +104,7 @@ async def test_start_campaign_stores_plan_and_results():
         patch.object(orchestrator, "build_vuln_report", return_value=report),
         patch.object(orchestrator, "propose_fix", AsyncMock()),
         patch("agents.orchestrator.TargetClient"),
+        patch.object(orchestrator, "recon_target", AsyncMock(return_value=ReconReport())),
     ):
         campaign_id = await orchestrator.start_campaign("http://victim")
 
@@ -127,6 +130,7 @@ async def test_approve_and_fix_runs_defender():
         patch.object(orchestrator, "build_vuln_report", return_value=report),
         patch.object(orchestrator, "propose_fix", AsyncMock(return_value=fix)),
         patch("agents.orchestrator.TargetClient"),
+        patch.object(orchestrator, "recon_target", AsyncMock(return_value=ReconReport())),
     ):
         campaign_id = await orchestrator.start_campaign(
             "http://victim", current_system_prompt="old"
@@ -162,6 +166,7 @@ async def test_state_transitions_are_correct():
         patch.object(orchestrator, "build_vuln_report", return_value=report),
         patch.object(orchestrator, "propose_fix", AsyncMock(return_value=fix)),
         patch("agents.orchestrator.TargetClient"),
+        patch.object(orchestrator, "recon_target", AsyncMock(return_value=ReconReport())),
         patch.object(store, "update", side_effect=recording_update),
     ):
         campaign_id = await orchestrator.start_campaign("http://victim")
@@ -187,6 +192,7 @@ async def test_approve_and_fix_rejects_wrong_status():
         patch.object(orchestrator, "build_vuln_report", return_value=report),
         patch.object(orchestrator, "propose_fix", AsyncMock(return_value=_make_fix())),
         patch("agents.orchestrator.TargetClient"),
+        patch.object(orchestrator, "recon_target", AsyncMock(return_value=ReconReport())),
     ):
         campaign_id = await orchestrator.start_campaign("http://victim")
         await orchestrator.approve_and_fix(campaign_id)  # moves to done

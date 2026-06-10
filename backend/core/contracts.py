@@ -65,6 +65,21 @@ class AttackCategory(str, Enum):
     TOOL_MISUSE = "TOOL_MISUSE"
 
 
+class ReconReport(BaseModel):
+    """Benign-probe profile of the target, produced by the Recon agent.
+
+    Feeds the Strategist (plan tailoring) and Attacker (discovered_context
+    replaces any hardcoded demo data). All defaulted so empty recon is valid."""
+
+    target_purpose: str = ""
+    discovered_tools: list[str] = Field(default_factory=list)
+    refusal_style: str = ""
+    exploitable_surface: list[str] = Field(default_factory=list)
+    # Concrete identifiers/entities the target revealed (e.g. order ids, names).
+    discovered_context: dict = Field(default_factory=dict)
+    notes: str = ""
+
+
 class AttackPlan(BaseModel):
     categories: list[AttackCategory]
     prompts_per: int
@@ -139,6 +154,7 @@ class Campaign(BaseModel):
 
     campaign_id: str
     status: str = "created"  # created | running | awaiting_approval | done
+    recon: ReconReport | None = None
     plan: AttackPlan | None = None
     results: list[AttackResult] = Field(default_factory=list)
     report: VulnReport | None = None

@@ -58,3 +58,18 @@ def record_attack(result: AttackResult) -> None:
         span.set_attribute("attack.verdict", result.verdict.value)
         span.set_attribute("attack.severity", result.severity.value)
         span.set_attribute("attack.reason", result.reason)
+
+
+def record_recon_probe(probe: str, response: str, tool_calls: list[dict]) -> None:
+    """Emit one Phoenix span for a benign recon probe. No-op if tracing is off.
+
+    Uses recon.* attributes (NOT attack.*) so the Analyst — which counts spans
+    carrying attack.category — never mistakes a probe for an attack/breach."""
+    tracer = _tracer_or_init()
+    if tracer is None:
+        return
+    with tracer.start_as_current_span("recon:probe") as span:
+        span.set_attribute("openinference.span.kind", "LLM")
+        span.set_attribute("recon.probe", probe)
+        span.set_attribute("recon.response", response)
+        span.set_attribute("recon.tool_calls", str([c.get("name") for c in tool_calls]))

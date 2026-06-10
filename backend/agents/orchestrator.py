@@ -14,6 +14,7 @@ from pathlib import Path
 from agents.analyst import build_vuln_report
 from agents.attacker import run_attacks
 from agents.defender import propose_fix
+from agents.recon import recon_target
 from agents.strategist import plan_campaign
 from agents.verifier import verify_fix
 from core.contracts import AttackResult, Campaign, TargetConfig
@@ -59,22 +60,30 @@ async def start_campaign(
     _system_prompts[campaign_id] = current_system_prompt or _read_victim_prompt()
     _targets[campaign_id] = (target_url, target_config)
 
-    # --- Strategist ---
     campaign.status = "running"
     store.update(campaign)
 
-    plan = await plan_campaign(target_description)
-    campaign.plan = plan
-    store.update(campaign)
-
-    # --- Attacker (one category at a time) ---
     if target_config is not None:
         target = TargetClient(config=target_config)
     else:
         target = TargetClient(base_url=target_url)
+
+    # --- Recon (benign discovery, runs FIRST) ---
+    recon = await recon_target(target)
+    campaign.recon = recon
+    store.update(campaign)
+    if _progress:
+        await _progress.put({"type": "recon_ready", "recon": recon.model_dump()})
+
+    # --- Strategist (tailored by recon) ---
+    plan = await plan_campaign(target_description, recon=recon)
+    campaign.plan = plan
+    store.update(campaign)
+
+    # --- Attacker (one category at a time, using discovered context) ---
     all_results: list[AttackResult] = []
     for category in plan.categories:
-        results = await run_attacks(category, target, plan.prompts_per)
+        results = await run_attacks(category, target, plan.prompts_per, recon=recon)
         all_results.extend(results)
         if _progress:
             for r in results:

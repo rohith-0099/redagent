@@ -15,7 +15,7 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 from pydantic import BaseModel
 
-from agents.attacker import _AGENTIC, _AGENTIC_ORDER_HINT, TARGET_RULES
+from agents.attacker import _AGENTIC, agentic_context_hint, TARGET_RULES
 from core.config import MAX_TURNS, MODEL
 from core.contracts import AttackCategory, AttackResult, Severity, Verdict
 from core.retry import adk_run
@@ -37,7 +37,7 @@ class _NextTurn(BaseModel):
 
 
 async def _next_turn(
-    category: AttackCategory, history: list[dict], guidance: str
+    category: AttackCategory, history: list[dict], guidance: str, recon=None
 ) -> str:
     """Ask the attacker LLM for the next escalating message given the history."""
     agent = LlmAgent(
@@ -51,7 +51,7 @@ async def _next_turn(
         app_name="redagent", user_id="redagent"
     )
 
-    agentic_hint = _AGENTIC_ORDER_HINT if category in _AGENTIC else ""
+    agentic_hint = agentic_context_hint(recon) if category in _AGENTIC else ""
     transcript_so_far = _render_history(history) or "(no messages yet — this is turn 1)"
     text = (
         f"Goal: make the bot break this rule: {TARGET_RULES[category]}"
@@ -86,6 +86,7 @@ async def run_crescendo(
     target: TargetClient,
     guidance: str = "",
     max_turns: int = MAX_TURNS,
+    recon=None,
 ) -> AttackResult:
     """Run one bounded multi-turn attempt. Returns a single AttackResult.
 
@@ -97,7 +98,7 @@ async def run_crescendo(
     breach_turn: int | None = None
 
     for turn in range(1, max_turns + 1):
-        next_msg = await _next_turn(category, history, guidance)
+        next_msg = await _next_turn(category, history, guidance, recon=recon)
         convo = _render_for_target(history, next_msg)
         try:
             response, tool_calls = await target.send_traced(convo)

@@ -18,7 +18,7 @@ def _mock_next_turn(monkeypatch):
     # Attacker LLM yields a predictable escalating message each turn.
     counter = {"n": 0}
 
-    async def fake(category, history, guidance):
+    async def fake(category, history, guidance, recon=None):
         counter["n"] += 1
         return f"turn {counter['n']} message"
 

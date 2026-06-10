@@ -12,6 +12,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 MODEL = "gemini-2.5-flash"
 MAX_ATTACKS = 30
 MAX_TURNS = 5  # hard cap on crescendo multi-turn attempts — never hang
+RECON_PROBES = 5  # benign discovery probes Recon sends before attacking
 TARGET_TIMEOUT = 30  # seconds; Vertex Flash ~2-5s, 30s is safe margin
 DEFAULT_PROMPTS_PER = 5
 
