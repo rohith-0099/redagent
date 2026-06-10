@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 /* ── Design tokens ─────────────────────────────────────────────────────────
-   Concept: monochrome green-gray ops console; status color (vermilion/green/
-   amber) is spent ONLY on verdicts + run state, so a breach is the one warm
-   thing on screen. The cool accent is reserved strictly for interaction. */
+   Terminal-ops monitoring console. Everything is monochrome green-gray; status
+   color (vermilion / green / amber) is spent ONLY on verdicts + run state, so a
+   breach is the one warm thing on screen. A restrained teal is reserved strictly
+   for interaction (focus + actionable controls) — never decoration. No blue,
+   no gradients-as-decor, no chunky cards. */
 @theme {
-  --color-base: #090c0d;
-  --color-base2: #0c1112;
+  --color-base: #0a0c0d;
+  --color-base2: #0d1213;
   --color-panel: #0e1416;
   --color-panel2: #121a1c;
   --color-line: #1b2528;
@@ -16,12 +18,12 @@
   --color-fg: #c7d4d2;
 
   --color-pass: #34d399;
-  --color-passdim: #112b24;
+  --color-passdim: #102a23;
   --color-fail: #ff5b43;
-  --color-faildim: #36130f;
+  --color-faildim: #2e1009;
   --color-warn: #e8a13a;
-  --color-warndim: #2e2210;
-  --color-accent: #4fc3d4;
+  --color-warndim: #2a2010;
+  --color-accent: #5fa8a0; /* interaction only */
 
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -38,25 +40,26 @@
     color: var(--color-fg);
     font-family: var(--font-mono);
     -webkit-font-smoothing: antialiased;
-    font-feature-settings: "tnum" 1;
+    font-feature-settings: "tnum" 1, "cv01" 1;
     overflow-x: hidden;
   }
-  /* graph-paper grid, faded toward the edges */
+  /* Faint CRT scanline texture — atmosphere, NOT a grid. Barely perceptible. */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--color-line) 60%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--color-line) 60%, transparent) 1px, transparent 1px);
-    background-size: 34px 34px;
-    -webkit-mask-image: radial-gradient(ellipse 130% 90% at 50% -10%, black 25%, transparent 78%);
-    mask-image: radial-gradient(ellipse 130% 90% at 50% -10%, black 25%, transparent 78%);
-    opacity: 0.55;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-line) 22%, transparent) 0px,
+      color-mix(in oklab, var(--color-line) 22%, transparent) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    opacity: 0.35;
   }
-  /* cold halo at the top */
+  /* Cold ambient halo at the very top — depth without a gradient surface. */
   body::after {
     content: "";
     position: fixed;
@@ -64,13 +67,13 @@
     z-index: 0;
     pointer-events: none;
     background: radial-gradient(
-      ellipse 70% 45% at 50% -18%,
-      color-mix(in oklab, var(--color-accent) 9%, transparent),
-      transparent 60%
+      ellipse 60% 36% at 50% -16%,
+      color-mix(in oklab, var(--color-accent) 7%, transparent),
+      transparent 62%
     );
   }
   ::selection {
-    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+    background: color-mix(in oklab, var(--color-accent) 32%, transparent);
     color: #fff;
   }
   :focus-visible {
@@ -78,8 +81,8 @@
     outline-offset: 2px;
   }
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
   }
   ::-webkit-scrollbar-thumb {
     background: var(--color-line);
@@ -110,13 +113,13 @@
     animation: blink 1.05s steps(2, end) infinite;
   }
   .row-flash {
-    animation: flashfail 0.9s ease-out 1;
+    animation: flashfail 1s ease-out 1;
   }
   .led-live {
     animation: pulse 1.6s ease-in-out infinite;
   }
   .reveal {
-    animation: reveal 0.45s ease-out both;
+    animation: reveal 0.4s ease-out both;
   }
 }
 
@@ -127,10 +130,10 @@
 }
 @keyframes flashfail {
   0% {
-    background-color: color-mix(in oklab, var(--color-fail) 30%, transparent);
+    background-color: color-mix(in oklab, var(--color-fail) 34%, transparent);
   }
   100% {
-    background-color: color-mix(in oklab, var(--color-fail) 7%, transparent);
+    background-color: color-mix(in oklab, var(--color-fail) 8%, transparent);
   }
 }
 @keyframes pulse {
@@ -145,7 +148,7 @@
 @keyframes reveal {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(5px);
   }
   to {
     opacity: 1;

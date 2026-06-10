@@ -10,9 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
-from agents.orchestrator import approve_and_fix, get_campaign, start_campaign
-from core.contracts import TargetConfig
+from agents.orchestrator import (
+    approve_and_fix,
+    get_campaign,
+    start_campaign,
+    verify_campaign,
+)
+from core.contracts import Preset, TargetConfig
 from tools.regression_export import export_regression_suite, render_pytest_file
+from tools.target_client import test_connection
 
 app = FastAPI(title="RedAgent API")
 
@@ -31,6 +37,23 @@ class CampaignRequest(BaseModel):
     target_url: str
     target_description: str = ""
     target_config: TargetConfig | None = None
+
+
+class TestConnectionRequest(BaseModel):
+    target_url: str
+    target_config: TargetConfig | None = None
+
+
+@app.post("/target/test")
+async def target_test(body: TestConnectionRequest):
+    """Send one harmless probe to validate a target before launching a campaign.
+
+    Mirrors the campaign launch path: an explicit target_config is used as-is;
+    otherwise the simple_json /chat shape is built from target_url."""
+    config = body.target_config or TargetConfig(
+        url=f"{body.target_url.rstrip('/')}/chat", preset=Preset.SIMPLE_JSON
+    )
+    return await test_connection(config)
 
 
 @app.post("/campaign", status_code=201)
@@ -99,6 +122,20 @@ async def approve_campaign(campaign_id: str):
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return campaign.fix
+
+
+@app.post("/campaign/{campaign_id}/verify")
+async def verify_campaign_route(campaign_id: str):
+    """Re-run the campaign's breached attacks against the approved fix and return
+    the before/after VerificationReport. 404 if unknown; 409 if no fix yet."""
+    campaign = get_campaign(campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    try:
+        campaign = await verify_campaign(campaign_id)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return campaign.verification
 
 
 @app.get("/campaign/{campaign_id}/export")

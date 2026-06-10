@@ -7,12 +7,14 @@ export function StatusBar({
   target,
   breaches,
   probes,
+  memory,
 }: {
   status: CampaignStatus | "idle";
   campaignId: string | null;
   target: string;
   breaches: number;
   probes: number;
+  memory: number;
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-base/85 backdrop-blur-md">
@@ -58,6 +60,11 @@ export function StatusBar({
                 {String(breaches).padStart(2, "0")}
               </span>
             </span>
+            {memory > 0 && (
+              <span className="hidden text-accent sm:inline">
+                MEM <span className="tabular-nums">{memory}</span>
+              </span>
+            )}
           </div>
           <StatusPill status={status} />
         </div>

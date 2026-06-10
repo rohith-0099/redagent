@@ -1,5 +1,13 @@
 // Shared presentational primitives for the console.
-import type { CampaignStatus, Severity, Verdict } from "@/lib/api";
+import {
+  AGENTIC_CATEGORIES,
+  type AttackCategory,
+  type AttackMode,
+  type CampaignStatus,
+  type Severity,
+  type ToolCall,
+  type Verdict,
+} from "@/lib/api";
 
 export function Panel({
   title,
@@ -104,4 +112,81 @@ export function StatusLed({ status }: { status: CampaignStatus | "idle" }) {
 
 export function pct(n: number): string {
   return `${Math.round(n * 100)}%`;
+}
+
+// Attack delivery mode — crescendo is the multi-turn differentiator.
+export function ModeBadge({
+  mode,
+  category,
+}: {
+  mode: AttackMode;
+  category: AttackCategory;
+}) {
+  const agentic = AGENTIC_CATEGORIES.has(category);
+  const label = agentic ? "AGENTIC" : mode === "crescendo" ? "CRESCENDO" : "SINGLE";
+  const cls = agentic
+    ? "border-fail/40 text-fail"
+    : mode === "crescendo"
+      ? "border-warn/40 text-warn"
+      : "border-line text-muted";
+  return (
+    <span
+      className={`inline-flex items-center border px-1.5 py-px text-[10px] tracking-[0.1em] ${cls}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+// OWASP mapping — id (e.g. LLM07) + framework lane (LLM / AGENTIC / CUSTOM).
+export function OwaspTag({
+  id,
+  framework,
+}: {
+  id: string | null;
+  framework: string;
+}) {
+  if (!id) {
+    return (
+      <span className="text-[10px] tracking-[0.1em] text-muted/70">UNMAPPED</span>
+    );
+  }
+  const agentic = framework === "AGENTIC";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] tracking-[0.1em] ${
+        agentic ? "text-fail/80" : "text-dim"
+      }`}
+    >
+      <span className="text-muted">{framework}</span>
+      <span className="font-600">{id}</span>
+    </span>
+  );
+}
+
+// Agentic evidence — the strongest visual: machine-readable proof a tool fired.
+export function formatToolCall(tc: ToolCall): string {
+  const args = Object.entries(tc.args || {})
+    .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+    .join(", ");
+  return `${tc.name}{ ${args} }`;
+}
+
+export function ToolEvidence({ calls }: { calls: ToolCall[] }) {
+  if (!calls?.length) return null;
+  return (
+    <div className="flex flex-col gap-1.5 border-l-2 border-l-fail bg-faildim/40 px-3 py-2">
+      <span className="text-[10px] tracking-[0.16em] text-fail/80">
+        ⚠ TOOL CALLS EXECUTED — AGENTIC BREACH EVIDENCE
+      </span>
+      {calls.map((tc, i) => (
+        <code
+          key={i}
+          className="break-words text-[12px] font-600 leading-relaxed text-fail"
+        >
+          {formatToolCall(tc)}
+        </code>
+      ))}
+    </div>
+  );
 }

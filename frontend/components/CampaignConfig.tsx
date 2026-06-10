@@ -1,5 +1,14 @@
-import type { CampaignStatus } from "@/lib/api";
+"use client";
+
+import { useState } from "react";
+import { type CampaignStatus, testConnection } from "@/lib/api";
 import { Panel } from "./ui";
+
+type TestState =
+  | { kind: "idle" }
+  | { kind: "testing" }
+  | { kind: "ok"; reply: string }
+  | { kind: "err"; msg: string };
 
 export function CampaignConfig({
   targetUrl,
@@ -20,10 +29,25 @@ export function CampaignConfig({
 }) {
   const active = status === "running";
   const disabled = launching || active;
+  const [test, setTest] = useState<TestState>({ kind: "idle" });
 
   const inputCls =
     "w-full border border-line bg-base2 px-3 py-2 text-[13px] text-fg placeholder:text-muted/70 " +
     "transition-colors focus:border-accent focus:outline-none";
+
+  async function runTest() {
+    setTest({ kind: "testing" });
+    try {
+      const r = await testConnection(targetUrl);
+      if (r.ok) setTest({ kind: "ok", reply: r.sample_reply || "(empty reply)" });
+      else setTest({ kind: "err", msg: r.error || "target did not answer" });
+    } catch (e) {
+      setTest({
+        kind: "err",
+        msg: e instanceof Error ? e.message : "request failed",
+      });
+    }
+  }
 
   return (
     <Panel title="◢ CONFIG">
@@ -45,11 +69,41 @@ export function CampaignConfig({
             id="target-url"
             className={inputCls}
             value={targetUrl}
-            onChange={(e) => setTargetUrl(e.target.value)}
-            placeholder="http://localhost:8001"
+            onChange={(e) => {
+              setTargetUrl(e.target.value);
+              setTest({ kind: "idle" });
+            }}
+            placeholder="http://localhost:8000"
             spellCheck={false}
             autoComplete="off"
           />
+          <div className="flex items-center gap-2">
+            <span className="border border-line bg-base2 px-1.5 py-px text-[10px] tracking-[0.1em] text-muted">
+              ADAPTER simple_json
+            </span>
+            <button
+              type="button"
+              onClick={runTest}
+              disabled={test.kind === "testing"}
+              className="text-[10.5px] tracking-[0.12em] text-accent transition-colors hover:text-fg disabled:text-muted"
+            >
+              {test.kind === "testing" ? (
+                <span className="caret">TESTING</span>
+              ) : (
+                "▷ TEST CONNECTION"
+              )}
+            </button>
+          </div>
+          {test.kind === "ok" && (
+            <p className="border-l-2 border-l-pass bg-passdim/40 px-2 py-1 text-[11px] leading-relaxed text-pass/90">
+              ✓ reachable — “{truncate(test.reply, 90)}”
+            </p>
+          )}
+          {test.kind === "err" && (
+            <p className="border-l-2 border-l-fail bg-faildim/40 px-2 py-1 text-[11px] leading-relaxed text-fail/90">
+              ✗ {test.msg}. Check the URL and that the target is running.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -95,4 +149,8 @@ export function CampaignConfig({
       </form>
     </Panel>
   );
+}
+
+function truncate(s: string, n: number): string {
+  return s.length > n ? s.slice(0, n) + "…" : s;
 }

@@ -8,9 +8,17 @@ import { pct } from "./ui";
 export function FixPanel({
   report,
   fix,
+  onVerify,
+  verifying,
+  verified,
+  exportHref,
 }: {
   report: VulnReport | null;
   fix: FixProposal;
+  onVerify: () => void;
+  verifying: boolean;
+  verified: boolean;
+  exportHref: string;
 }) {
   const breached = report
     ? CATEGORY_ORDER.filter(
@@ -90,6 +98,40 @@ export function FixPanel({
             </p>
           )}
         </div>
+      </div>
+
+      {/* Action bar: prove the fix (Verifier) + export a CI regression suite. */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-line px-3.5 py-3">
+        <button
+          onClick={onVerify}
+          disabled={verifying}
+          className={
+            "border px-3 py-2 text-[11px] font-600 tracking-[0.14em] transition-colors " +
+            (verifying
+              ? "cursor-not-allowed border-line text-muted"
+              : verified
+                ? "border-pass/45 text-pass hover:bg-pass/10"
+                : "border-accent/50 text-accent hover:bg-accent/10 active:bg-accent/15")
+          }
+        >
+          {verifying ? (
+            <span className="caret">RE-TESTING BREACHES</span>
+          ) : verified ? (
+            "↻ RE-VERIFY FIX"
+          ) : (
+            "▶ VERIFY FIX — RE-TEST BREACHES"
+          )}
+        </button>
+
+        <a
+          href={exportHref}
+          className="border border-line px-3 py-2 text-[11px] font-600 tracking-[0.14em] text-dim transition-colors hover:border-accent/50 hover:text-accent"
+        >
+          ⤓ DOWNLOAD REGRESSION SUITE
+        </a>
+        <span className="text-[10.5px] leading-relaxed text-muted">
+          pytest suite — breaches become CI tests that must never pass again.
+        </span>
       </div>
     </section>
   );

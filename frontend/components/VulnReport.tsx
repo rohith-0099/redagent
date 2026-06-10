@@ -3,7 +3,7 @@ import {
   type CampaignStatus,
   type VulnReport as VulnReportT,
 } from "@/lib/api";
-import { Panel, SeverityChip, pct } from "./ui";
+import { OwaspTag, Panel, SeverityChip, pct } from "./ui";
 
 export function VulnReport({
   report,
@@ -76,10 +76,12 @@ export function VulnReport({
                       }}
                     />
                   </div>
-                  <span className="text-[10.5px] text-muted">
-                    {rep.examples.length} breach
-                    {rep.examples.length === 1 ? "" : "es"} logged
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <OwaspTag id={rep.owasp_id} framework={rep.framework} />
+                    <span className="truncate text-[10.5px] text-muted">
+                      {rep.owasp_title !== "Unmapped" ? rep.owasp_title : ""}
+                    </span>
+                  </div>
                 </li>
               );
             })}
