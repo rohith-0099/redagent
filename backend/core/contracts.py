@@ -154,6 +154,9 @@ class Campaign(BaseModel):
 
     campaign_id: str
     status: str = "created"  # created | running | awaiting_approval | done
+    # How to reach the target — stored so a regression suite is self-contained
+    # and replayable (CI/CD export, v2 step 10).
+    target_config: TargetConfig | None = None
     recon: ReconReport | None = None
     plan: AttackPlan | None = None
     results: list[AttackResult] = Field(default_factory=list)

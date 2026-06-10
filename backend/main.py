@@ -7,11 +7,12 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
 from agents.orchestrator import approve_and_fix, get_campaign, start_campaign
 from core.contracts import TargetConfig
+from tools.regression_export import export_regression_suite, render_pytest_file
 
 app = FastAPI(title="RedAgent API")
 
@@ -98,6 +99,29 @@ async def approve_campaign(campaign_id: str):
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return campaign.fix
+
+
+@app.get("/campaign/{campaign_id}/export")
+async def export_campaign(campaign_id: str, format: str = "json"):
+    """Export the campaign's breaches as a replayable regression suite (CI/CD).
+
+    format=json (default) → the machine-readable suite; format=pytest → a drop-in
+    pytest file as a download. 404 if the campaign is unknown or has no results."""
+    campaign = get_campaign(campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if not campaign.results:
+        raise HTTPException(status_code=404, detail="Campaign has no results to export")
+
+    suite = export_regression_suite(campaign)
+    if format == "pytest":
+        return PlainTextResponse(
+            render_pytest_file(suite),
+            headers={
+                "Content-Disposition": "attachment; filename=test_redagent_regression.py"
+            },
+        )
+    return suite
 
 
 @app.get("/campaign/{campaign_id}")

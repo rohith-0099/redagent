@@ -17,7 +17,7 @@ from agents.defender import propose_fix
 from agents.recon import recon_target
 from agents.strategist import plan_campaign
 from agents.verifier import verify_fix
-from core.contracts import AttackResult, Campaign, TargetConfig
+from core.contracts import AttackResult, Campaign, Preset, TargetConfig
 from core.state import store
 from tools.attack_memory import (
     breach_patterns_guidance,
@@ -87,8 +87,15 @@ async def start_campaign(
 
     if target_config is not None:
         target = TargetClient(config=target_config)
+        effective_config = target_config
     else:
         target = TargetClient(base_url=target_url)
+        # Mirror the backward-compat simple_json shape so the export is replayable.
+        effective_config = TargetConfig(
+            url=f"{target_url.rstrip('/')}/chat", preset=Preset.SIMPLE_JSON
+        )
+    campaign.target_config = effective_config
+    store.update(campaign)
 
     # --- Recon (benign discovery, runs FIRST) ---
     recon = await recon_target(target)
