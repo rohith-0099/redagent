@@ -21,8 +21,8 @@ export function StatusBar({
       <div className="mx-auto flex h-13 w-full max-w-[1500px] items-center gap-3 px-4 lg:px-6">
         {/* brand */}
         <div className="flex items-center gap-2.5">
-          <span className="size-2.5 bg-fail" aria-hidden />
-          <span className="text-[15px] font-700 tracking-[0.22em] text-fg">
+          <span className="brand-led size-2.5" aria-hidden />
+          <span className="brand-text text-[15px] font-700 tracking-[0.22em] text-fg">
             RED<span className="text-fail">·</span>AGENT
           </span>
         </div>

@@ -88,8 +88,8 @@ const STATUS_META: Record<
   },
   awaiting_approval: {
     label: "AWAITING APPROVAL",
-    cls: "text-accent border-accent/40",
-    led: "bg-accent led-live",
+    cls: "text-warn border-warn/40",
+    led: "bg-warn led-live",
   },
   done: { label: "DONE", cls: "text-pass border-pass/40", led: "bg-pass" },
 };

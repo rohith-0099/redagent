@@ -1,29 +1,32 @@
 @import "tailwindcss";
 
 /* ── Design tokens ─────────────────────────────────────────────────────────
-   Terminal-ops monitoring console. Everything is monochrome green-gray; status
-   color (vermilion / green / amber) is spent ONLY on verdicts + run state, so a
-   breach is the one warm thing on screen. A restrained teal is reserved strictly
-   for interaction (focus + actionable controls) — never decoration. No blue,
-   no gradients-as-decor, no chunky cards. */
+   Terminal-ops monitoring console on PURE BLACK. Text is monochrome neutral
+   gray; status color is spent ONLY on verdicts + run state — just three:
+     red  #dc2626  breach / FAIL / danger
+     green #2a8f52 HELD / PASS / healthy
+     yellow #d9aa3a in-progress / RUNNING / AWAITING / warning
+   No teal/blue/other accents. Cards are glassy-matte: a barely-there white film
+   over black with a thin low-opacity border. Interaction reads neutral gray. */
 @theme {
-  --color-base: #0a0c0d;
-  --color-base2: #0d1213;
-  --color-panel: #0e1416;
-  --color-panel2: #121a1c;
-  --color-line: #1b2528;
-  --color-linebright: #2a383d;
-  --color-muted: #5d6f72;
-  --color-dim: #849799;
-  --color-fg: #c7d4d2;
+  --color-base: #000000;
+  --color-base2: #0d0d0d;
+  /* glassy-matte card surfaces — faint translucent white over pure black */
+  --color-panel: rgba(255, 255, 255, 0.035);
+  --color-panel2: rgba(255, 255, 255, 0.06);
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-linebright: rgba(255, 255, 255, 0.15);
+  --color-muted: #6b7280;
+  --color-dim: #9ca3af;
+  --color-fg: #e6e8ea;
 
-  --color-pass: #34d399;
-  --color-passdim: #102a23;
-  --color-fail: #ff5b43;
-  --color-faildim: #2e1009;
-  --color-warn: #e8a13a;
-  --color-warndim: #2a2010;
-  --color-accent: #5fa8a0; /* interaction only */
+  --color-pass: #2a8f52;
+  --color-passdim: #0c2418;
+  --color-fail: #dc2626;
+  --color-faildim: #2a0b0b;
+  --color-warn: #d9aa3a;
+  --color-warndim: #241d08;
+  --color-accent: #b0b6ba; /* neutral interaction (no teal/blue) */
 
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -107,6 +110,27 @@
   color: var(--color-warn);
 }
 
+/* brand LED — glossy red orb (replaces the flat square in the wordmark).
+   Radial highlight + soft outer glow + inner specular = glassy; pulses slowly. */
+.brand-led {
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at 34% 30%,
+    #ff7a6b 0%,
+    #dc2626 55%,
+    #7f1212 100%
+  );
+  box-shadow:
+    0 0 7px rgba(220, 38, 38, 0.75),
+    0 0 2px rgba(220, 38, 38, 0.9),
+    inset 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+/* clean wordmark reveal — letters settle in from wide tracking on load */
+.brand-text {
+  animation: brandin 0.85s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
 /* Motion is opt-in: everything below is disabled under reduced-motion. */
 @media (prefers-reduced-motion: no-preference) {
   .caret::after {
@@ -120,6 +144,29 @@
   }
   .reveal {
     animation: reveal 0.4s ease-out both;
+  }
+  .brand-led {
+    animation: ledblink 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes ledblink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+@keyframes brandin {
+  from {
+    opacity: 0;
+    letter-spacing: 0.45em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.22em;
   }
 }
 
