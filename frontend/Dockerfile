@@ -9,11 +9,13 @@ RUN bun install --frozen-lockfile
 # App source (self-hosted font under app/fonts → no build-time font fetch).
 COPY . .
 
-# NEXT_PUBLIC_* is baked into the client bundle at BUILD time. Pass the deployed
-# API base as a build arg; defaults to localhost:8000 for local container builds.
-ARG NEXT_PUBLIC_API_BASE=http://localhost:8000
+# NEXT_PUBLIC_* is baked into the client bundle at BUILD time. Defaults are the
+# deployed Cloud Run URLs (public client values) so `gcloud run deploy --source`
+# bakes them without --build-arg; override via --build-arg for other envs. Local
+# `bun dev` / `bun run build` ignore the Dockerfile, so local stays on localhost.
+ARG NEXT_PUBLIC_API_BASE=https://redagent-api-563626673936.us-central1.run.app
 ENV NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}
-ARG NEXT_PUBLIC_DEFAULT_TARGET
+ARG NEXT_PUBLIC_DEFAULT_TARGET=https://redagent-victim-563626673936.us-central1.run.app
 ENV NEXT_PUBLIC_DEFAULT_TARGET=${NEXT_PUBLIC_DEFAULT_TARGET}
 
 RUN bun run build
