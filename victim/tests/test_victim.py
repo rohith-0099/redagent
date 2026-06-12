@@ -17,7 +17,7 @@ client = TestClient(main.app)
 def _resp(parts, text=None):
     """Fake a genai GenerateContentResponse with the given parts + .text."""
     content = gtypes.Content(role="model", parts=parts)
-    return SimpleNamespace(candidates=[SimpleNamespace(content=content)], text=text)
+    return SimpleNamespace(candidates=[SimpleNamespace(content=content)], text=text)/
 
 
 class _FakeModels:
