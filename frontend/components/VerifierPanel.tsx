@@ -3,6 +3,7 @@ import {
   type VerificationReport,
 } from "@/lib/api";
 import { pct } from "./ui";
+import { ArrowRight, Check, ShieldCheck, X } from "./icons";
 
 const VERDICT_META: Record<string, { label: string; cls: string }> = {
   fix_effective: { label: "FIX EFFECTIVE", cls: "border-pass/45 text-pass" },
@@ -22,11 +23,14 @@ export function VerifierPanel({ v }: { v: VerificationReport }) {
   return (
     <section className="reveal mt-4 border border-line bg-panel/70">
       <header className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
-        <h2 className="text-[11px] font-600 tracking-[0.18em] text-dim">
+        <h2 className="flex items-center gap-2 text-[11px] font-600 tracking-[0.18em] text-dim">
+          <span className="icon-chip size-5 text-[12px] text-accent">
+            <ShieldCheck />
+          </span>
           VERIFIER · RE-TEST PROOF
         </h2>
         <span
-          className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-700 tracking-[0.16em] ${meta.cls}`}
+          className={`inline-flex items-center rounded-[3px] border px-2 py-0.5 text-[10px] font-700 tracking-[0.16em] ${meta.cls}`}
         >
           {meta.label}
         </span>
@@ -34,9 +38,7 @@ export function VerifierPanel({ v }: { v: VerificationReport }) {
 
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-line px-3.5 py-3 text-[12px]">
         <Stat label="ORIGINAL BREACHES" value={v.original_breaches} tone="fail" />
-        <span className="text-muted" aria-hidden>
-          →
-        </span>
+        <ArrowRight className="text-[15px] text-muted" aria-hidden />
         <Stat
           label="AFTER FIX"
           value={v.breaches_after_fix}
@@ -58,9 +60,7 @@ export function VerifierPanel({ v }: { v: VerificationReport }) {
                 <span className="font-600 tabular-nums text-fail">
                   {pct(ba.before)}
                 </span>
-                <span className="text-muted" aria-hidden>
-                  →
-                </span>
+                <ArrowRight className="text-[13px] text-muted" aria-hidden />
                 <span
                   className={
                     "font-600 tabular-nums " + (held ? "text-pass" : "text-fail")
@@ -70,11 +70,19 @@ export function VerifierPanel({ v }: { v: VerificationReport }) {
                 </span>
                 <span
                   className={
-                    "ml-auto text-[11px] tracking-[0.12em] " +
+                    "ml-auto inline-flex items-center gap-1 text-[11px] tracking-[0.12em] " +
                     (held ? "text-pass" : "text-fail")
                   }
                 >
-                  {held ? "✓ HELD" : "✗ STILL BREACHING"}
+                  {held ? (
+                    <>
+                      <Check className="text-[12px]" /> HELD
+                    </>
+                  ) : (
+                    <>
+                      <X className="text-[12px]" /> STILL BREACHING
+                    </>
+                  )}
                 </span>
               </li>
             );

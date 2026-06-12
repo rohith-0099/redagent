@@ -4,6 +4,7 @@ import {
   type VulnReport as VulnReportT,
 } from "@/lib/api";
 import { OwaspTag, Panel, SeverityChip, pct } from "./ui";
+import { Check, FileBug } from "./icons";
 
 export function VulnReport({
   report,
@@ -22,6 +23,7 @@ export function VulnReport({
   return (
     <Panel
       title="VULN REPORT"
+      icon={<FileBug />}
       right={
         report ? (
           <span className="text-[11px] tracking-[0.12em] text-muted">
@@ -46,7 +48,10 @@ export function VulnReport({
               : "// awaiting campaign results"}
           </p>
         ) : entries.length === 0 ? (
-          <p className="text-[12px] text-pass">✓ no categories breached</p>
+          <p className="flex items-center gap-1.5 text-[12px] text-pass">
+            <Check className="text-[13px]" />
+            no categories breached
+          </p>
         ) : (
           <ul className="flex flex-col gap-3">
             {entries.map(([cat, rep]) => {
@@ -68,9 +73,13 @@ export function VulnReport({
                     </div>
                   </div>
                   {/* breach-rate track */}
-                  <div className="h-1.5 w-full bg-base2">
+                  <div className="h-1.5 w-full overflow-hidden rounded-[2px] bg-base2">
                     <div
-                      className={breach ? "h-full bg-fail" : "h-full bg-pass"}
+                      className={
+                        breach
+                          ? "h-full bg-fail led-fail transition-[width] duration-500"
+                          : "h-full bg-pass transition-[width] duration-500"
+                      }
                       style={{
                         width: `${Math.max(rep.success_rate * 100, breach ? 4 : 2)}%`,
                       }}

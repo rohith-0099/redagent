@@ -1,4 +1,5 @@
 import type { AttackCategory } from "@/lib/api";
+import { Layers } from "./icons";
 
 export interface MemoryRecall {
   category: AttackCategory;
@@ -14,10 +15,16 @@ export function MemoryIndicator({ recalls }: { recalls: MemoryRecall[] }) {
   return (
     <section className="reveal border border-accent/30 bg-base2/60">
       <div className="flex items-center gap-2 border-b border-accent/20 px-3.5 py-2">
-        <span className="size-2 bg-accent led-live" aria-hidden />
+        <span className="icon-chip size-5 border-accent/25 text-[12px] text-accent">
+          <Layers />
+        </span>
         <h2 className="text-[11px] font-600 tracking-[0.16em] text-accent">
           ATTACK MEMORY · ADAPTIVE
         </h2>
+        <span
+          className="ml-auto size-2 bg-accent led led-accent led-live"
+          aria-hidden
+        />
       </div>
       <div className="flex flex-col gap-2 p-3.5">
         <p className="text-[12px] leading-relaxed text-dim">

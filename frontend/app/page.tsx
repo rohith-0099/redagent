@@ -21,6 +21,7 @@ import { ApprovalGate } from "@/components/ApprovalGate";
 import { AttackStream, type StreamRow } from "@/components/AttackStream";
 import { CampaignConfig } from "@/components/CampaignConfig";
 import { FixPanel } from "@/components/FixPanel";
+import { Close } from "@/components/icons";
 import { MemoryIndicator, type MemoryRecall } from "@/components/MemoryIndicator";
 import { ReconPanel } from "@/components/ReconPanel";
 import { StatusBar } from "@/components/StatusBar";
@@ -220,10 +221,10 @@ export default function Console() {
             <p className="text-[12px] leading-relaxed text-fail/95">{error}</p>
             <button
               onClick={() => setError(null)}
-              className="shrink-0 text-[12px] text-muted hover:text-fg"
+              className="shrink-0 text-[14px] text-muted transition-colors hover:text-fg"
               aria-label="Dismiss error"
             >
-              ✕
+              <Close />
             </button>
           </div>
         )}

@@ -8,14 +8,17 @@ import {
   type ToolCall,
   type Verdict,
 } from "@/lib/api";
+import { AlertTriangle, Check, X } from "./icons";
 
 export function Panel({
   title,
+  icon,
   right,
   children,
   className = "",
 }: {
   title?: string;
+  icon?: React.ReactNode;
   right?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
@@ -25,8 +28,13 @@ export function Panel({
       className={`border border-line bg-panel/70 backdrop-blur-[1px] ${className}`}
     >
       {title && (
-        <header className="flex items-center justify-between border-b border-line px-3.5 py-2">
-          <h2 className="text-[11px] font-600 tracking-[0.18em] text-dim">
+        <header className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
+          <h2 className="flex items-center gap-2 text-[11px] font-600 tracking-[0.18em] text-dim">
+            {icon && (
+              <span className="icon-chip size-5 text-[12px] text-accent">
+                {icon}
+              </span>
+            )}
             {title}
           </h2>
           {right}
@@ -57,11 +65,15 @@ export function VerdictGlyph({ verdict }: { verdict: Verdict }) {
   const fail = verdict === "FAIL";
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[11px] font-700 tracking-[0.1em] ${
+      className={`inline-flex items-center gap-1.5 text-[11px] font-700 tracking-[0.1em] ${
         fail ? "text-fail" : "text-pass"
       }`}
     >
-      <span aria-hidden>{fail ? "✗" : "✓"}</span>
+      {fail ? (
+        <X className="text-[13px]" />
+      ) : (
+        <Check className="text-[13px]" />
+      )}
       {fail ? "BREACH" : "HELD"}
     </span>
   );
@@ -79,26 +91,26 @@ const STATUS_META: Record<
   CampaignStatus | "idle",
   { label: string; cls: string; led: string }
 > = {
-  idle: { label: "IDLE", cls: "text-muted border-line", led: "bg-muted" },
-  created: { label: "CREATED", cls: "text-dim border-line", led: "bg-dim" },
+  idle: { label: "IDLE", cls: "text-muted border-line", led: "bg-muted led" },
+  created: { label: "CREATED", cls: "text-dim border-line", led: "bg-dim led" },
   running: {
     label: "RUNNING",
     cls: "text-warn border-warn/40",
-    led: "bg-warn led-live",
+    led: "bg-warn led led-warn led-live",
   },
   awaiting_approval: {
     label: "AWAITING APPROVAL",
     cls: "text-warn border-warn/40",
-    led: "bg-warn led-live",
+    led: "bg-warn led led-warn led-live",
   },
-  done: { label: "DONE", cls: "text-pass border-pass/40", led: "bg-pass" },
+  done: { label: "DONE", cls: "text-pass border-pass/40", led: "bg-pass led led-pass" },
 };
 
 export function StatusPill({ status }: { status: CampaignStatus | "idle" }) {
   const m = STATUS_META[status];
   return (
     <span
-      className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[11px] font-600 tracking-[0.14em] ${m.cls}`}
+      className={`inline-flex items-center gap-2 rounded-[3px] border px-2.5 py-1 text-[11px] font-600 tracking-[0.14em] ${m.cls}`}
     >
       <span className={`size-2 ${m.led}`} aria-hidden />
       {m.label}
@@ -176,8 +188,9 @@ export function ToolEvidence({ calls }: { calls: ToolCall[] }) {
   if (!calls?.length) return null;
   return (
     <div className="flex flex-col gap-1.5 border-l-2 border-l-fail bg-faildim/40 px-3 py-2">
-      <span className="text-[10px] tracking-[0.16em] text-fail/80">
-        ⚠ TOOL CALLS EXECUTED — AGENTIC BREACH EVIDENCE
+      <span className="flex items-center gap-1.5 text-[10px] tracking-[0.16em] text-fail/80">
+        <AlertTriangle className="text-[12px]" />
+        TOOL CALLS EXECUTED — AGENTIC BREACH EVIDENCE
       </span>
       {calls.map((tc, i) => (
         <code

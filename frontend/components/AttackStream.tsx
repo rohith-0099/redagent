@@ -16,6 +16,7 @@ import {
   ToolEvidence,
   VerdictGlyph,
 } from "./ui";
+import { ChevronDown, CornerDownRight, Crosshair, Terminal } from "./icons";
 
 export interface StreamRow {
   result: AttackResult;
@@ -54,6 +55,7 @@ export function AttackStream({
   return (
     <Panel
       title="ATTACK STREAM"
+      icon={<Crosshair />}
       className="flex h-[60vh] flex-col lg:sticky lg:top-[68px] lg:h-[calc(100dvh-96px)]"
       right={
         <div className="flex items-center gap-3 text-[11px] tracking-[0.12em]">
@@ -151,16 +153,17 @@ function Row({
         <span className="shrink-0">
           <VerdictGlyph verdict={result.verdict} />
         </span>
-        <span className="w-3 shrink-0 text-center text-muted" aria-hidden>
-          {open ? "−" : "+"}
-        </span>
+        <ChevronDown
+          className={"shrink-0 text-[14px] text-muted chev" + (open ? " open" : "")}
+        />
       </button>
 
       {/* Agentic breach: surface the money-shot evidence even when collapsed. */}
       {hasEvidence && !open && (
-        <div className="px-3.5 pb-2 pl-12">
+        <div className="flex items-start gap-1.5 px-3.5 pb-2 pl-12">
+          <CornerDownRight className="mt-0.5 shrink-0 text-[12px]" />
           <code className="break-words text-[11.5px] font-600 text-fail">
-            ↳ {formatToolCall(result.tool_calls[0])}
+            {formatToolCall(result.tool_calls[0])}
             {result.tool_calls.length > 1
               ? `  +${result.tool_calls.length - 1} more`
               : ""}
@@ -168,27 +171,29 @@ function Row({
         </div>
       )}
 
-      {open && (
-        <div className="space-y-3 border-t border-line/60 bg-base2/60 px-3.5 py-3 pl-12 text-[12px]">
-          {result.attack_mode === "crescendo" && result.transcript?.length ? (
-            <Crescendo
-              transcript={result.transcript}
-              breachTurn={result.breach_turn}
-            />
-          ) : (
-            <>
-              <Field label="PROMPT">{result.prompt}</Field>
-              <Field label="RESPONSE" tone={fail ? "fail" : "default"}>
-                {result.response}
-              </Field>
-            </>
-          )}
-          {result.tool_calls?.length > 0 && (
-            <ToolEvidence calls={result.tool_calls} />
-          )}
-          <Field label="JUDGE">{result.reason}</Field>
+      <div className={"expander" + (open ? " open" : "")}>
+        <div className="expander-clip">
+          <div className="expander-body space-y-3 border-t border-line/60 bg-base2/60 px-3.5 py-3 pl-12 text-[12px]">
+            {result.attack_mode === "crescendo" && result.transcript?.length ? (
+              <Crescendo
+                transcript={result.transcript}
+                breachTurn={result.breach_turn}
+              />
+            ) : (
+              <>
+                <Field label="PROMPT">{result.prompt}</Field>
+                <Field label="RESPONSE" tone={fail ? "fail" : "default"}>
+                  {result.response}
+                </Field>
+              </>
+            )}
+            {result.tool_calls?.length > 0 && (
+              <ToolEvidence calls={result.tool_calls} />
+            )}
+            <Field label="JUDGE">{result.reason}</Field>
+          </div>
         </div>
-      )}
+      </div>
     </li>
   );
 }
@@ -241,8 +246,9 @@ function Crescendo({
                 {turn.target_response}
               </p>
               {turn.tool_calls && turn.tool_calls.length > 0 && (
-                <code className="break-words text-[11.5px] font-600 text-fail">
-                  ⚙ {turn.tool_calls.map(formatToolCall).join("  ")}
+                <code className="flex items-center gap-1.5 break-words text-[11.5px] font-600 text-fail">
+                  <Terminal className="shrink-0 text-[13px]" />
+                  {turn.tool_calls.map(formatToolCall).join("  ")}
                 </code>
               )}
             </li>
@@ -280,7 +286,10 @@ function Field({
 function EmptyState({ status }: { status: CampaignStatus | "idle" }) {
   const running = status === "running";
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+      <Crosshair
+        className={"text-[34px] " + (running ? "text-warn/70 led-live" : "text-line")}
+      />
       <p className={"text-[13px] " + (running ? "text-warn caret" : "text-muted")}>
         {running ? "awaiting first probe" : "// no active campaign"}
       </p>

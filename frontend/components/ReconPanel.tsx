@@ -1,5 +1,6 @@
 import type { CampaignStatus, ReconReport } from "@/lib/api";
 import { Panel } from "./ui";
+import { ChevronRight, Radar } from "./icons";
 
 export function ReconPanel({
   recon,
@@ -11,6 +12,7 @@ export function ReconPanel({
   return (
     <Panel
       title="RECON"
+      icon={<Radar />}
       right={
         recon ? (
           <span className="text-[10px] tracking-[0.12em] text-accent">
@@ -65,8 +67,12 @@ export function ReconPanel({
                 </span>
                 <ul className="flex flex-col gap-1">
                   {recon.exploitable_surface.map((s, i) => (
-                    <li key={i} className="text-[11.5px] leading-relaxed text-dim">
-                      <span className="text-muted">›</span> {s}
+                    <li
+                      key={i}
+                      className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-dim"
+                    >
+                      <ChevronRight className="mt-0.5 shrink-0 text-[12px] text-muted" />
+                      {s}
                     </li>
                   ))}
                 </ul>

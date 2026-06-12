@@ -27,9 +27,7 @@ export function StatusBar({
           </span>
         </div>
 
-        <span className="hidden text-line sm:inline" aria-hidden>
-          │
-        </span>
+        <span className="hidden h-4 w-px bg-line sm:inline-block" aria-hidden />
 
         {/* target + campaign id */}
         <div className="hidden min-w-0 flex-1 items-center gap-4 text-[12px] sm:flex">

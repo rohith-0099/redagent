@@ -4,6 +4,7 @@ import {
   type VulnReport,
 } from "@/lib/api";
 import { pct } from "./ui";
+import { ArrowLeft, ArrowRight, Check, Download, Refresh, ShieldCheck } from "./icons";
 
 export function FixPanel({
   report,
@@ -29,19 +30,23 @@ export function FixPanel({
   return (
     <section className="reveal mt-4 border border-line bg-panel/70">
       <header className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
-        <h2 className="text-[11px] font-600 tracking-[0.18em] text-dim">
+        <h2 className="flex items-center gap-2 text-[11px] font-600 tracking-[0.18em] text-dim">
+          <span className="icon-chip size-5 border-pass/30 text-[12px] text-pass">
+            <ShieldCheck />
+          </span>
           DEFENSE APPLIED
         </h2>
-        <span className="inline-flex items-center gap-1.5 border border-pass/45 px-2 py-0.5 text-[10px] font-700 tracking-[0.16em] text-pass">
-          <span aria-hidden>✓</span> HARDENED
+        <span className="inline-flex items-center gap-1.5 rounded-[3px] border border-pass/45 px-2 py-0.5 text-[10px] font-700 tracking-[0.16em] text-pass">
+          <Check className="text-[12px]" /> HARDENED
         </span>
       </header>
 
       <div className="grid gap-px bg-line md:grid-cols-2">
         {/* BEFORE — breaches */}
         <div className="bg-panel p-4">
-          <h3 className="mb-3 text-[10px] tracking-[0.18em] text-fail">
-            ◂ BEFORE — BREACHES FOUND
+          <h3 className="mb-3 flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-fail">
+            <ArrowLeft className="text-[12px]" />
+            BEFORE — BREACHES FOUND
           </h3>
           {breached.length === 0 ? (
             <p className="text-[12px] text-muted">No breaches recorded.</p>
@@ -67,8 +72,9 @@ export function FixPanel({
 
         {/* AFTER — hardened */}
         <div className="bg-panel p-4">
-          <h3 className="mb-3 text-[10px] tracking-[0.18em] text-pass">
-            AFTER — HARDENED DEFENSE ▸
+          <h3 className="mb-3 flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-pass">
+            AFTER — HARDENED DEFENSE
+            <ArrowRight className="text-[12px]" />
           </h3>
 
           <span className="text-[10px] tracking-[0.16em] text-muted">
@@ -84,9 +90,7 @@ export function FixPanel({
           <ul className="mt-1.5 flex flex-col gap-1.5">
             {fix.guards.map((g, i) => (
               <li key={i} className="flex gap-2 text-[12px] leading-relaxed">
-                <span className="mt-px shrink-0 text-pass" aria-hidden>
-                  ✓
-                </span>
+                <Check className="mt-0.5 shrink-0 text-[13px] text-pass" />
                 <span className="text-dim">{g}</span>
               </li>
             ))}
@@ -106,7 +110,7 @@ export function FixPanel({
           onClick={onVerify}
           disabled={verifying}
           className={
-            "border px-3 py-2 text-[11px] font-600 tracking-[0.14em] transition-colors " +
+            "inline-flex items-center gap-2 border px-3 py-2 text-[11px] font-600 tracking-[0.14em] transition-colors " +
             (verifying
               ? "cursor-not-allowed border-line text-muted"
               : verified
@@ -117,17 +121,24 @@ export function FixPanel({
           {verifying ? (
             <span className="caret">RE-TESTING BREACHES</span>
           ) : verified ? (
-            "↻ RE-VERIFY FIX"
+            <>
+              <Refresh className="text-[13px]" />
+              RE-VERIFY FIX
+            </>
           ) : (
-            "▶ VERIFY FIX — RE-TEST BREACHES"
+            <>
+              <Refresh className="text-[13px]" />
+              VERIFY FIX — RE-TEST BREACHES
+            </>
           )}
         </button>
 
         <a
           href={exportHref}
-          className="border border-line px-3 py-2 text-[11px] font-600 tracking-[0.14em] text-dim transition-colors hover:border-accent/50 hover:text-accent"
+          className="inline-flex items-center gap-2 border border-line px-3 py-2 text-[11px] font-600 tracking-[0.14em] text-dim transition-colors hover:border-accent/50 hover:text-accent"
         >
-          ⤓ DOWNLOAD REGRESSION SUITE
+          <Download className="text-[13px]" />
+          DOWNLOAD REGRESSION SUITE
         </a>
         <span className="text-[10.5px] leading-relaxed text-muted">
           pytest suite — breaches become CI tests that must never pass again.

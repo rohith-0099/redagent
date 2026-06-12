@@ -1,3 +1,5 @@
+import { ShieldCheck } from "./icons";
+
 export function ApprovalGate({
   onApprove,
   approving,
@@ -8,8 +10,8 @@ export function ApprovalGate({
   return (
     <section className="reveal border border-warn/35 bg-warndim/50">
       <div className="flex items-center gap-2 border-b border-warn/25 px-3.5 py-2">
-        <span className="text-warn" aria-hidden>
-          ▲
+        <span className="icon-chip size-5 border-warn/30 bg-warndim text-[12px] text-warn">
+          <ShieldCheck />
         </span>
         <h2 className="text-[11px] font-600 tracking-[0.18em] text-warn">
           HUMAN APPROVAL REQUIRED
@@ -25,7 +27,7 @@ export function ApprovalGate({
           onClick={onApprove}
           disabled={approving}
           className={
-            "border px-3 py-2.5 text-[12px] font-600 tracking-[0.16em] transition-colors " +
+            "inline-flex items-center gap-2 border px-3 py-2.5 text-[12px] font-600 tracking-[0.16em] transition-colors " +
             (approving
               ? "cursor-not-allowed border-line text-muted"
               : "border-warn/50 text-warn hover:bg-warn/10 active:bg-warn/15")
@@ -34,7 +36,10 @@ export function ApprovalGate({
           {approving ? (
             <span className="caret">DEFENDER WORKING</span>
           ) : (
-            "▶ APPROVE & APPLY FIX"
+            <>
+              <ShieldCheck className="text-[14px]" />
+              APPROVE &amp; APPLY FIX
+            </>
           )}
         </button>
       </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type CampaignStatus, testConnection } from "@/lib/api";
 import { Panel } from "./ui";
+import { Check, Play, Sliders, X, Zap } from "./icons";
 
 type TestState =
   | { kind: "idle" }
@@ -50,7 +51,7 @@ export function CampaignConfig({
   }
 
   return (
-    <Panel title="◢ CONFIG">
+    <Panel title="CONFIG" icon={<Sliders />}>
       <form
         className="flex flex-col gap-4 p-3.5"
         onSubmit={(e) => {
@@ -85,23 +86,28 @@ export function CampaignConfig({
               type="button"
               onClick={runTest}
               disabled={test.kind === "testing"}
-              className="text-[10.5px] tracking-[0.12em] text-accent transition-colors hover:text-fg disabled:text-muted"
+              className="inline-flex items-center gap-1.5 text-[10.5px] tracking-[0.12em] text-accent transition-colors hover:text-fg disabled:text-muted"
             >
               {test.kind === "testing" ? (
                 <span className="caret">TESTING</span>
               ) : (
-                "▷ TEST CONNECTION"
+                <>
+                  <Play className="text-[11px]" />
+                  TEST CONNECTION
+                </>
               )}
             </button>
           </div>
           {test.kind === "ok" && (
-            <p className="border-l-2 border-l-pass bg-passdim/40 px-2 py-1 text-[11px] leading-relaxed text-pass/90">
-              ✓ reachable — “{truncate(test.reply, 90)}”
+            <p className="flex items-start gap-1.5 border-l-2 border-l-pass bg-passdim/40 px-2 py-1 text-[11px] leading-relaxed text-pass/90">
+              <Check className="mt-0.5 shrink-0 text-[12px]" />
+              reachable — &ldquo;{truncate(test.reply, 90)}&rdquo;
             </p>
           )}
           {test.kind === "err" && (
-            <p className="border-l-2 border-l-fail bg-faildim/40 px-2 py-1 text-[11px] leading-relaxed text-fail/90">
-              ✗ {test.msg}. Check the URL and that the target is running.
+            <p className="flex items-start gap-1.5 border-l-2 border-l-fail bg-faildim/40 px-2 py-1 text-[11px] leading-relaxed text-fail/90">
+              <X className="mt-0.5 shrink-0 text-[12px]" />
+              {test.msg}. Check the URL and that the target is running.
             </p>
           )}
         </div>
@@ -132,7 +138,7 @@ export function CampaignConfig({
           type="submit"
           disabled={disabled}
           className={
-            "group relative mt-0.5 border px-3 py-2.5 text-[12px] font-600 tracking-[0.16em] transition-colors " +
+            "group relative mt-0.5 inline-flex items-center justify-center gap-2 border px-3 py-2.5 text-[12px] font-600 tracking-[0.16em] transition-colors " +
             (disabled
               ? "cursor-not-allowed border-line text-muted"
               : "border-accent/50 text-accent hover:bg-accent/10 active:bg-accent/15")
@@ -143,7 +149,10 @@ export function CampaignConfig({
           ) : active ? (
             "CAMPAIGN ACTIVE"
           ) : (
-            "▶ LAUNCH CAMPAIGN"
+            <>
+              <Zap className="text-[14px]" />
+              LAUNCH CAMPAIGN
+            </>
           )}
         </button>
       </form>
